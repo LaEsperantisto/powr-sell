@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Factory Survival</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="sidebar">
+            <h2>Inventory</h2>
+            <div id="inventory-list"></div>
+            
+            <hr>
+            
+            <h2>Build Menu</h2>
+            <div class="build-options">
+                <button class="build-btn active" data-type="delete">Demolish</button>
+                <button class="build-btn" data-type="conveyor">Conveyor</button>
+                <button class="build-btn" data-type="miner">Miner</button>
+            </div>
+            
+            <div class="controls-info">
+                <p><strong>Current Rotation:</strong> <span id="rotation-display">RIGHT</span></p>
+                <button id="rotate-btn">Rotate Building (R)</button>
+            </div>
+
+            <hr>
+
+            <div class="instructions">
+                <h3>Controls:</h3>
+                <ul>
+                    <li><strong>WASD / Arrow Keys:</strong> Move Player</li>
+                    <li><strong>Spacebar:</strong> Mine natural resource block under player</li>
+                    <li><strong>Left Click:</strong> Build / Demolish on grid</li>
+                    <li><strong>R Key:</strong> Rotate building selection</li>
+                </ul>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
