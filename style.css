@@ -111,3 +111,25 @@ button.active {
     flex-grow: 1;
     background-color: #222;
 }
+
+.build-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 8px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.btn-name {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.btn-recipe {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+}

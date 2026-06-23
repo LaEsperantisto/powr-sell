@@ -544,10 +544,29 @@ class UIManager {
             const newBuilding = document.createElement('button');
             newBuilding.classList.add('build-btn');
             newBuilding.setAttribute('data-type', key);
-            newBuilding.innerText = value.name;
+            
+            // Create a span for the Building Title
+            const nameSpan = document.createElement('span');
+            nameSpan.classList.add('btn-name');
+            nameSpan.innerText = value.name;
+            newBuilding.appendChild(nameSpan);
+
+            // Construct and clean up the recipe string format dynamically
+            const costEntries = Object.entries(value.cost).map(([resKey, amt]) => {
+                const prettyResName = RESOURCE_TYPES[resKey] ? RESOURCE_TYPES[resKey].name : resKey;
+                return `${amt} ${prettyResName}`;
+            });
+            
+            // Create a span for the Recipe text underneath
+            const recipeSpan = document.createElement('span');
+            recipeSpan.classList.add('btn-recipe');
+            recipeSpan.innerText = `(Cost: ${costEntries.join(', ')})`;
+            newBuilding.appendChild(recipeSpan);
+
             buildOptions.appendChild(newBuilding);
         });
 
+        // Set up click handlers for all buttons
         document.querySelectorAll('.build-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetBtn = e.currentTarget;
