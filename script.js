@@ -301,6 +301,7 @@ class GameEngine {
     init() {
         this.generateWorld();
         this.ui.setupBuildUI();
+        this.ui.setupSaveLoadUI(); // Setup Save/Load Buttons
         this.ui.updateInventoryUI();
         this.resizeCanvas();
         
@@ -308,6 +309,59 @@ class GameEngine {
         canvas.addEventListener('mousedown', (e) => this.handleCanvasClick(e));
         
         this.loop();
+    }
+
+    // --- SAVE / LOAD SYSTEM ---
+    saveGame() {
+        const saveData = {
+            inventory: this.inventory,
+            naturalResources: this.naturalResources,
+            buildings: Object.entries(this.buildings).reduce((acc, [key, building]) => {
+                acc[key] = {
+                    type: building.constructor.name.toLowerCase(),
+                    direction: building.direction
+                };
+                return acc;
+            }, {})
+        };
+
+        localStorage.setItem('factory_survival_save', JSON.stringify(saveData));
+        alert('Factory layout and resources saved successfully!');
+    }
+
+    loadGame() {
+        const rawData = localStorage.getItem('factory_survival_save');
+        if (!rawData) {
+            alert('No saved factory layout found.');
+            return;
+        }
+
+        try {
+            const saveData = JSON.parse(rawData);
+
+            Object.keys(RESOURCE_TYPES).forEach(res => {
+                this.inventory[res] = saveData.inventory[res] !== undefined ? saveData.inventory[res] : (DEBUG ? 999 : 0);
+            });
+
+            this.naturalResources = saveData.naturalResources || {};
+
+            this.buildings = {};
+            this.movingItems = [];
+
+            Object.entries(saveData.buildings).forEach(([key, data]) => {
+                if (BuildingFactory[data.type]) {
+                    this.buildings[key] = BuildingFactory[data.type](data.direction);
+                } else {
+                    console.warn(`Building type "${data.type}" not recognized in this game version.`);
+                }
+            });
+
+            this.ui.updateInventoryUI();
+            alert('Factory layout and resources loaded successfully!');
+        } catch (e) {
+            console.error("Failed to parse save data:", e);
+            alert('Error loading save file: Data corrupted or incompatible.');
+        }
     }
 
     resizeCanvas() {
@@ -414,14 +468,12 @@ class GameEngine {
             const currentBuilding = this.buildings[`${item.gridX},${item.gridY}`];
             
             if (currentBuilding) {
-                // Try feeding input structures first
                 if (typeof currentBuilding.tryReceiveItem === 'function') {
                     if (currentBuilding.tryReceiveItem(item)) {
                         this.movingItems.splice(i, 1);
                         continue;
                     }
                 }
-                // Decoupled delegation: The building decides how the item moves/progresses
                 currentBuilding.handleItemOnTile(item, this);
             } else {
                 item.progress = 0;
@@ -560,7 +612,7 @@ class UIManager {
             // Create a span for the Recipe text underneath
             const recipeSpan = document.createElement('span');
             recipeSpan.classList.add('btn-recipe');
-            recipeSpan.innerText = `(Cost: ${costEntries.join(', ')})`;
+            recipeSpan.innerText = `Cost:\n${costEntries.join(', ')}`;
             newBuilding.appendChild(recipeSpan);
 
             buildOptions.appendChild(newBuilding);
@@ -582,6 +634,11 @@ class UIManager {
                 }
             });
         });
+    }
+
+    setupSaveLoadUI() {
+        document.getElementById('save-btn').addEventListener('click', () => this.engine.saveGame());
+        document.getElementById('load-btn').addEventListener('click', () => this.engine.loadGame());
     }
 }
 
