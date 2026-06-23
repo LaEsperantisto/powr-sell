@@ -1,4 +1,4 @@
-const DEBUG = false;
+const DEBUG = true;
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -31,14 +31,27 @@ const RECIPES = {
 const BUILD_RECIPES = {
     conveyor: { name: 'Conveyor', cost: { iron_ore: 1 } },
     miner:    { name: 'Miner',    cost: { iron_ore: 3, copper_ore: 1 } },
-    smelter:  { name: 'Smelter',  cost: { iron_ore: 5 } }
+    smelter: { name: 'Smelter', cost: { iron_ore: 5, coal: 10 } },
+    conveyor2: { name: 'Conveyor 2', cost: { pure_iron: 1 } },
+    miner2:    { name: 'Miner 2',    cost: { pure_iron: 3, pure_copper: 1 } },
+    smelter2:  { name: 'Smelter 2',  cost: { pure_iron: 5, coal: 20 } },
+};
+
+
+// Map factory to easily instantiate dynamic structures
+const BuildingFactory = {
+    conveyor: (dir) => new Conveyor(dir),
+    miner:    (dir) => new Miner(dir),
+    smelter: (dir) => new Smelter(dir),
+    conveyor2: (dir) => new Conveyor2(dir),
+    miner2:    (dir) => new Miner2(dir),
+    smelter2:  (dir) => new Smelter2(dir),
 };
 
 // --- OBJECT-ORIENTED BUILDING LOGIC ---
 class Building {
-    constructor(direction, level) {
+    constructor(direction) {
         this.direction = direction;
-        this.level = level;
     }
     
     getAngle() {
@@ -64,6 +77,11 @@ class Building {
 }
 
 class Conveyor extends Building {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.02; // Base speed
+    }
+
     draw(bx, by) {
         this.applyRotationTransform(bx, by);
         ctx.fillStyle = '#555';
@@ -74,17 +92,43 @@ class Conveyor extends Building {
         ctx.lineTo(-5, -10);
         ctx.lineTo(-5, 10);
         ctx.fill();
+        ctx.restore();
+    }
 
-        ctx.fillStyle = '#000000';
-        ctx.fillText(this.level, -2, 3);
+    handleItemOnTile(item, engine) {
+        item.progress += this.speed;
+        if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+    }
+}
 
+class Conveyor2 extends Conveyor {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.06;
+    }
+
+    draw(bx, by) {
+        this.applyRotationTransform(bx, by);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#26ff00';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, -10);
+        ctx.lineTo(-5, 10);
+        ctx.fill();
         ctx.restore();
     }
 }
 
 class Miner extends Building {
-    constructor(direction, level) {
-        super(direction, level);
+    constructor(direction) {
+        super(direction);
         this.timer = 0
     }
 
@@ -94,10 +138,6 @@ class Miner extends Building {
         ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
         ctx.fillStyle = '#ffcc00';
         ctx.fillRect(5, -5, 12, 10);
-
-        ctx.fillStyle = '#000000';
-        ctx.fillText(this.level, -2, 3);
-
         ctx.restore();
     }
 
@@ -119,9 +159,37 @@ class Miner extends Building {
     }
 }
 
+class Miner2 extends Miner {
+    draw(bx, by) {
+        this.applyRotationTransform(bx, by);
+        ctx.fillStyle = '#dcbe10';
+        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        ctx.fillStyle = '#ff00ae';
+        ctx.fillRect(5, -5, 12, 10);
+        ctx.restore();
+    }
+
+    update(key, bx, by, engine) {
+        this.timer++;
+        if (this.timer >= 90) {
+            this.timer = 0;
+            const minedRes = engine.naturalResources[key];
+            if (minedRes) {
+                const offset = DIR_OFFSETS[this.direction];
+                engine.movingItems.push({
+                    type: minedRes,
+                    gridX: bx + offset.x,
+                    gridY: by + offset.y,
+                    progress: 0
+                });
+            }
+        }
+    }
+}
+
 class Smelter extends Building {
-    constructor(direction, level) {
-        super(direction, level);
+    constructor(direction) {
+        super(direction);
         this.timer = 0;
         this.isProcessing = false;
         this.currentOutput = null;
@@ -138,9 +206,6 @@ class Smelter extends Building {
         
         ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
         ctx.fillRect(4, -5, 12, 10);
-
-        ctx.fillStyle = '#000000';
-        ctx.fillText(this.level, -2, 3);
 
         ctx.restore();
     }
@@ -182,12 +247,29 @@ class Smelter extends Building {
     }
 }
 
-// Map factory to easily instantiate dynamic structures
-const BuildingFactory = {
-    conveyor: (dir, level) => new Conveyor(dir, level),
-    miner:    (dir, level) => new Miner(dir, level),
-    smelter:  (dir, level) => new Smelter(dir, level)
-};
+class Smelter2 extends Smelter {
+    constructor(direction) {
+        super(direction);
+        this.timer = 0;
+        this.isProcessing = false;
+        this.currentOutput = null;
+        this.processingTime = 60;
+    }
+
+    draw(bx, by) {
+        this.applyRotationTransform(bx, by);
+        ctx.fillStyle = '#b2fff2';
+        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        
+        ctx.fillStyle = '#4dff00';
+        ctx.fillRect(-16, -5, 12, 10);
+        
+        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
+        ctx.fillRect(4, -5, 12, 10);
+
+        ctx.restore();
+    }
+}
 
 // --- CORE GAME ENGINE ---
 class GameEngine {
@@ -272,17 +354,14 @@ class GameEngine {
 
         if (this.currentSelectedBuild === 'delete') {
             const building = this.buildings[key];
-            
             if (building) {
                 const type = building.constructor.name.toLowerCase();
                 const recipe = BUILD_RECIPES[type]?.cost;
-
                 if (recipe) {
                     Object.keys(recipe).forEach(res => {
                         this.inventory[res] = (this.inventory[res] || 0) + recipe[res];
                     });
                 }
-
                 delete this.buildings[key];
                 this.ui.updateInventoryUI();
             }
@@ -296,7 +375,7 @@ class GameEngine {
 
         if (canAfford) {
             Object.keys(recipe).forEach(res => this.inventory[res] -= recipe[res]);
-            this.buildings[key] = BuildingFactory[this.currentSelectedBuild](this.getCurrentDirection(), 0);
+            this.buildings[key] = BuildingFactory[this.currentSelectedBuild](this.getCurrentDirection());
             this.ui.updateInventoryUI();
         }
     }
@@ -321,7 +400,6 @@ class GameEngine {
         for (let i = this.movingItems.length - 1; i >= 0; i--) {
             const item = this.movingItems[i];
             
-            // 1. Check Player collection
             if (item.gridX === pGridX && item.gridY === pGridY) {
                 this.inventory[item.type] = (this.inventory[item.type] || 0) + 1;
                 this.ui.updateInventoryUI();
@@ -332,27 +410,15 @@ class GameEngine {
             const currentBuilding = this.buildings[`${item.gridX},${item.gridY}`];
             
             if (currentBuilding) {
-                // 2. Try to feed into machines (like Smelters)
+                // Try feeding input structures first
                 if (typeof currentBuilding.tryReceiveItem === 'function') {
-                    const consumed = currentBuilding.tryReceiveItem(item);
-                    if (consumed) {
-                        this.movingItems.splice(i, 1); // Delete item from conveyor belt
+                    if (currentBuilding.tryReceiveItem(item)) {
+                        this.movingItems.splice(i, 1);
                         continue;
                     }
                 }
-
-                // 3. Normal Conveyor belt movement
-                if (currentBuilding instanceof Conveyor) {
-                    item.progress += 0.02;
-                    if (item.progress >= 1) {
-                        const offset = DIR_OFFSETS[currentBuilding.direction];
-                        item.gridX += offset.x;
-                        item.gridY += offset.y;
-                        item.progress = 0;
-                    }
-                } else {
-                    item.progress = 0;
-                }
+                // Decoupled delegation: The building decides how the item moves/progresses
+                currentBuilding.handleItemOnTile(item, this);
             } else {
                 item.progress = 0;
             }
@@ -385,7 +451,7 @@ class GameEngine {
             building.draw(bx, by);
         }
 
-        // 3. Draw Moving Ore Items (FIXED)
+        // 3. Draw Moving Ore Items
         this.movingItems.forEach(item => {
             let offset = { x: 0, y: 0 };
             const currentBuilding = this.buildings[`${item.gridX},${item.gridY}`];
@@ -415,7 +481,7 @@ class GameEngine {
         this.draw();
         requestAnimationFrame(() => this.loop());
     }
-}
+}}
 
 // --- SYSTEM HANDLERS ---
 class InputHandler {
