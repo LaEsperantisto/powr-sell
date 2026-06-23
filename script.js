@@ -19,12 +19,18 @@ const RESOURCE_TYPES = {
     coal:        { color: '#111111', name: 'Coal' },
     pure_iron:   { color: '#b0c4de', name: 'Pure Iron' },
     pure_copper: { color: '#ff7f50', name: 'Pure Copper' },
+    iron_ingot:   { color: '#9ec7fc', name: 'Iron Ingot' },
+    copper_ingot: { color: '#ff581c', name: 'Copper Ingot' },
 };
 
 const RECIPES = {
     smelter: {
         iron_ore:   { count: 1, output: 'pure_iron' },
         copper_ore: { count: 1, output: 'pure_copper' }
+    },
+    moulder: {
+        pure_iron: { count: 1, output: 'iron_ingot' },
+        pure_copper: { count: 1, output: 'copper_ingot' },
     }
 };
 
@@ -34,7 +40,12 @@ const BUILD_RECIPES = {
     smelter: { name: 'Smelter', cost: { iron_ore: 5, coal: 10 } },
     conveyor2: { name: 'Conveyor 2', cost: { pure_iron: 1 } },
     miner2:    { name: 'Miner 2',    cost: { pure_iron: 3, pure_copper: 1 } },
-    smelter2:  { name: 'Smelter 2',  cost: { pure_iron: 5, coal: 20 } },
+    smelter2: { name: 'Smelter 2', cost: { pure_iron: 5, coal: 20 } },
+    moulder: { name: 'Moulder', cost: { pure_iron: 10, pure_copper: 20, coal: 20 } },
+    conveyor3: { name: 'Conveyor 3', cost: { iron_ingot: 1 } },
+    miner3:    { name: 'Miner 3',    cost: { iron_ingot: 3, copper_ingot: 1 } },
+    smelter3: { name: 'Smelter 3', cost: { iron_ingot: 5, coal: 30 } },
+    moulder2: { name: 'Moulder 2', cost: { iron_ingot: 10, copper_ingot: 20, coal: 30 } },
 };
 
 
@@ -44,239 +55,21 @@ const BuildingFactory = {
     miner:    (dir) => new Miner(dir),
     smelter: (dir) => new Smelter(dir),
     conveyor2: (dir) => new Conveyor2(dir),
-    miner2:    (dir) => new Miner2(dir),
-    smelter2:  { name: 'Smelter 2',  cost: { pure_iron: 5, coal: 20 } },
-    conveyor2: (dir) => new Conveyor2(dir),
-    miner2:    (dir) => new Miner2(dir),
-    smelter2:  (dir) => new Smelter2(dir),
+    miner2: (dir) => new Miner2(dir),
+    smelter2: (dir) => new Smelter2(dir),
+    conveyor3: (dir) => new Conveyor3(dir),
+    miner3:    (dir) => new Miner3(dir),
+    smelter3: (dir) => new Smelter3(dir),
+    moulder: (dir) => new Moulder(dir),
+    moulder2: (dir) => new Moulder2(dir),
 };
 
-// --- OBJECT-ORIENTED BUILDING LOGIC ---
-class Building {
-    constructor(direction) {
-        this.direction = direction;
-    }
-    
-    getAngle() {
-        return DIR_OFFSETS[this.direction].angle;
-    }
-
-    applyRotationTransform(bx, by, cameraX, cameraY) {
-        const centerX = bx * TILE_SIZE + TILE_SIZE / 2 - cameraX;
-        const centerY = by * TILE_SIZE + TILE_SIZE / 2 - cameraY;
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(this.getAngle());
-    }
-
-    draw(bx, by, cameraX, cameraY) {
-        // Implemented by subclasses
-        console.warn("THIS SHOULD BE UNREACHABLE");
-    }
-
-    update(key, bx, by, engine) {
-        // Optional override per subclass
-    }
-
-    handleItemOnTile(item, engine) {
-        // Optional override per subclass
-    }
-}
-
-class Conveyor extends Building {
-    constructor(direction) {
-        super(direction);
-        this.speed = 0.02; // Base speed
-    }
-
-    draw(bx, by, cameraX, cameraY) {
-        this.applyRotationTransform(bx, by, cameraX, cameraY);
-        ctx.fillStyle = '#555';
-        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-        ctx.fillStyle = '#00ffcc';
-        ctx.beginPath();
-        ctx.moveTo(10, 0);
-        ctx.lineTo(-5, -10);
-        ctx.lineTo(-5, 10);
-        ctx.fill();
-        ctx.restore();
-    }
-
-    handleItemOnTile(item, engine) {
-        item.progress += this.speed;
-        if (item.progress >= 1) {
-            const offset = DIR_OFFSETS[this.direction];
-            item.gridX += offset.x;
-            item.gridY += offset.y;
-            item.progress = 0;
-        }
-    }
-}
-
-class Conveyor2 extends Conveyor {
-    constructor(direction) {
-        super(direction);
-        this.speed = 0.06;
-    }
-
-    draw(bx, by, cameraX, cameraY) {
-        this.applyRotationTransform(bx, by, cameraX, cameraY);
-        ctx.fillStyle = '#555';
-        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-        ctx.fillStyle = '#26ff00';
-        ctx.beginPath();
-        ctx.moveTo(10, 0);
-        ctx.lineTo(-5, -10);
-        ctx.lineTo(-5, 10);
-        ctx.fill();
-        ctx.restore();
-    }
-}
-
-class Miner extends Building {
-    constructor(direction) {
-        super(direction);
-        this.timer = 0
-    }
-
-    draw(bx, by, cameraX, cameraY) {
-        this.applyRotationTransform(bx, by, cameraX, cameraY);
-        ctx.fillStyle = '#8b0000';
-        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        ctx.fillStyle = '#ffcc00';
-        ctx.fillRect(5, -5, 12, 10);
-        ctx.restore();
-    }
-
-    update(key, bx, by, engine) {
-        this.timer++;
-        if (this.timer >= 120) {
-            this.timer = 0;
-            const minedRes = engine.naturalResources[key];
-            if (minedRes) {
-                const offset = DIR_OFFSETS[this.direction];
-                engine.movingItems.push({
-                    type: minedRes,
-                    gridX: bx + offset.x,
-                    gridY: by + offset.y,
-                    progress: 0
-                });
-            }
-        }
-    }
-}
-
-class Miner2 extends Miner {
-    draw(bx, by, cameraX, cameraY) {
-        this.applyRotationTransform(bx, by, cameraX, cameraY);
-        ctx.fillStyle = '#dcbe10';
-        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        ctx.fillStyle = '#ff00ae';
-        ctx.fillRect(5, -5, 12, 10);
-        ctx.restore();
-    }
-
-    update(key, bx, by, engine) {
-        this.timer++;
-        if (this.timer >= 90) {
-            this.timer = 0;
-            const minedRes = engine.naturalResources[key];
-            if (minedRes) {
-                const offset = DIR_OFFSETS[this.direction];
-                engine.movingItems.push({
-                    type: minedRes,
-                    gridX: bx + offset.x,
-                    gridY: by + offset.y,
-                    progress: 0
-                });
-            }
-        }
-    }
-}
-
-class Smelter extends Building {
-    constructor(direction) {
-        super(direction);
-        this.timer = 0;
-        this.isProcessing = false;
-        this.currentOutput = null;
-        this.processingTime = 90;
-    }
-
-    draw(bx, by, cameraX, cameraY) {
-        this.applyRotationTransform(bx, by, cameraX, cameraY);
-        ctx.fillStyle = '#7b7b7b';
-        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        
-        ctx.fillStyle = '#4dff00';
-        ctx.fillRect(-16, -5, 12, 10);
-        
-        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
-        ctx.fillRect(4, -5, 12, 10);
-
-        ctx.restore();
-    }
-
-    update(key, bx, by, engine) {
-        if (this.isProcessing) {
-            this.timer++;
-            if (this.timer >= this.processingTime) {
-                const offset = DIR_OFFSETS[this.direction];
-                
-                engine.movingItems.push({
-                    type: this.currentOutput,
-                    gridX: bx + offset.x,
-                    gridY: by + offset.y,
-                    progress: 0.1
-                });
-
-                this.isProcessing = false;
-                this.currentOutput = null;
-                this.timer = 0;
-            }
-        }
-    }
-
-    
-    tryReceiveItem(item) {
-        if (this.isProcessing) return false;
-
-        const smelterRecipes = RECIPES.smelter;
-        const recipe = smelterRecipes[item.type];
-
-        if (recipe) {
-            this.isProcessing = true;
-            this.currentOutput = recipe.output;
-            this.timer = 0;
-            return true; // Item consumed successfully
-        }
-        return false;
-    }
-}
-
-class Smelter2 extends Smelter {
-    constructor(direction) {
-        super(direction);
-        this.timer = 0;
-        this.isProcessing = false;
-        this.currentOutput = null;
-        this.processingTime = 60;
-    }
-
-    draw(bx, by, cameraX, cameraY) {
-        this.applyRotationTransform(bx, by, cameraX, cameraY);
-        ctx.fillStyle = '#b2fff2';
-        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        
-        ctx.fillStyle = '#4dff00';
-        ctx.fillRect(-16, -5, 12, 10);
-        
-        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
-        ctx.fillRect(4, -5, 12, 10);
-
-        ctx.restore();
-    }
-}
+import {
+    Conveyor, Conveyor2, Conveyor3,
+    Smelter, Smelter2, Smelter3,
+    Miner, Miner2, Miner3,
+    Moulder, Moulder2,
+ } from './buildings.js';
 
 // --- CORE GAME ENGINE ---
 class GameEngine {
@@ -339,7 +132,7 @@ class GameEngine {
     loadGame() {
         const validation = confirm("Are you sure you want to override the current world?");
         if (!validation) return;
-        
+
         const rawData = localStorage.getItem('factory_survival_save');
         if (!rawData) {
             alert('No saved factory layout found.');
@@ -368,7 +161,6 @@ class GameEngine {
                 }
             });
 
-            this.ui.updateInventoryUI();
             alert('Factory layout and resources loaded successfully!');
         } catch (e) {
             console.error("Failed to parse save data:", e);
@@ -377,7 +169,7 @@ class GameEngine {
     }
 
     resizeCanvas() {
-        canvas.width = window.innerWidth - 300;
+        canvas.width = window.innerWidth - 600;
         canvas.height = window.innerHeight;
     }
 
@@ -677,4 +469,4 @@ class UIManager {
 }
 
 // Fire up engine instance
-new GameEngine();
+const engine = new GameEngine();

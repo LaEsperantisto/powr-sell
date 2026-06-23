@@ -8,7 +8,7 @@
 </head>
 <body>
     <div id="game-container">
-        <div id="sidebar">
+        <div id="left-sidebar">
             <h2>Inventory</h2>
             <div id="inventory-list"></div>
             
@@ -27,6 +27,11 @@
                 <button id="save-btn" style="flex-grow: 1; padding: 10px; cursor: pointer;">Save Factory</button>
                 <button id="load-btn" style="flex-grow: 1; padding: 10px; cursor: pointer;">Load Factory</button>
             </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="right-sidebar">
             
             <div class="controls-info">
                 <p><strong>Current Rotation:</strong> <span id="rotation-display">RIGHT</span></p>
@@ -45,10 +50,8 @@
                 </ul>
             </div>
         </div>
-
-        <canvas id="gameCanvas"></canvas>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
