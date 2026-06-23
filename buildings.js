@@ -1,3 +1,5 @@
+import { TILE_SIZE, ctx, DIR_OFFSETS, DIRECTIONS, RECIPES } from "./globals.js";
+
 
 // --- OBJECT-ORIENTED BUILDING LOGIC ---
 export class Building {
@@ -91,7 +93,7 @@ export class Conveyor3 extends Conveyor {
         this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#555';
         ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-        ctx.fillStyle = '#26ff00';
+        ctx.fillStyle = '#ff0000';
         ctx.beginPath();
         ctx.moveTo(10, 0);
         ctx.lineTo(-5, -10);
@@ -379,5 +381,174 @@ export class Moulder2 extends Moulder {
         ctx.fillRect(4, -5, 12, 10);
 
         ctx.restore();
+    }
+}
+
+export class Moulder3 extends Moulder {
+    constructor(direction) {
+        super(direction);
+        this.timer = 0;
+        this.isProcessing = false;
+        this.currentOutput = null;
+        this.processingTime = 100;
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#d4af8f';
+        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        
+        ctx.fillStyle = '#4dff00';
+        ctx.fillRect(-16, -5, 12, 10);
+        
+        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
+        ctx.fillRect(4, -5, 12, 10);
+
+        ctx.restore();
+    }
+}
+
+
+export class Splitter extends Conveyor {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.02; // Base speed
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        
+        ctx.fillStyle = '#00ffcc';
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+        
+        ctx.rotate(Math.PI / 2);
+        
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += this.speed;
+        if (item.progress >= 1) {
+            let offset;
+            if (Math.random() >= 0.5) {
+                offset = DIR_OFFSETS[this.direction];
+            }
+            else {
+                const currentIndex = DIRECTIONS.indexOf(this.direction);
+                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
+                offset = DIR_OFFSETS[rightDirection];
+            }
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+    }
+}
+
+export class Splitter2 extends Splitter {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.06; // Base speed
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#26ff00';
+        
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+        
+        ctx.rotate(Math.PI / 2);
+        
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += this.speed;
+        if (item.progress >= 1) {
+            let offset;
+            if (Math.random() >= 0.5) {
+                offset = DIR_OFFSETS[this.direction];
+            }
+            else {
+                const currentIndex = DIRECTIONS.indexOf(this.direction);
+                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
+                offset = DIR_OFFSETS[rightDirection];
+            }
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+    }
+}
+
+export class Splitter3 extends Splitter {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.12; // Base speed
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#ff0000';
+        
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+        
+        ctx.rotate(Math.PI / 2);
+        
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += this.speed;
+        if (item.progress >= 1) {
+            let offset;
+            if (Math.random() >= 0.5) {
+                offset = DIR_OFFSETS[this.direction];
+            }
+            else {
+                const currentIndex = DIRECTIONS.indexOf(this.direction);
+                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
+                offset = DIR_OFFSETS[rightDirection];
+            }
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
     }
 }
