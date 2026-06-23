@@ -74,6 +74,10 @@ class Building {
     update(key, bx, by, engine) {
         // Optional override per subclass
     }
+
+    handleItemOnTile(item, engine) {
+        // Optional override per subclass
+    }
 }
 
 class Conveyor extends Building {
