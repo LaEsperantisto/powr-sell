@@ -1,4 +1,4 @@
-const DEBUG = true;
+const DEBUG = false;
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -141,7 +141,7 @@ class Smelter extends Building {
 
         ctx.fillStyle = '#000000';
         ctx.fillText(this.level, -2, 3);
-        
+
         ctx.restore();
     }
 
