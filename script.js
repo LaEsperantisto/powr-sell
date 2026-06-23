@@ -1,4 +1,4 @@
-const DEBUG = true;
+const DEBUG = false;
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -481,7 +481,7 @@ class GameEngine {
         this.draw();
         requestAnimationFrame(() => this.loop());
     }
-}}
+}
 
 // --- SYSTEM HANDLERS ---
 class InputHandler {
