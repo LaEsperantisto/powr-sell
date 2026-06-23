@@ -8,6 +8,10 @@ import {
     Splitter,
     Splitter2,
     Splitter3,
+    Receiver,
+    ThreeWaySplitter,
+    ThreeWaySplitterPart2,
+    ThreeWaySplitterPart3,
 } from './buildings.js';
 
 import {
@@ -17,7 +21,7 @@ import {
     ctx,
     canvas,
     DIRECTIONS,
-    DIR_OFFSETS
+    DIR_OFFSETS,
 } from './globals.js';
 
 const BuildingFactory = {
@@ -36,6 +40,10 @@ const BuildingFactory = {
     splitter: (dir) => new Splitter(dir),
     splitter2: (dir) => new Splitter2(dir),
     splitter3: (dir) => new Splitter3(dir),
+    receiver: (dir) => new Receiver(dir),
+    threewaysplitter: (dir) => new ThreeWaySplitter(dir),
+    threewaysplitterpart2: (dir) => new ThreeWaySplitterPart2(dir),
+    threewaysplitterpart3: (dir) => new ThreeWaySplitterPart3(dir),
 };
 
 // --- CORE GAME ENGINE ---
@@ -44,6 +52,7 @@ class GameEngine {
         this.player = { x: 100, y: 100, size: 20, speed: 4 };
         this.inventory = {};
         this.generatedTiles = new Set();
+        this.mouseGridPosition = { x: null, y: null };
 
         Object.keys(RESOURCE_TYPES).forEach(resource => {
             this.inventory[resource] = DEBUG ? 999 : 0;
@@ -70,6 +79,11 @@ class GameEngine {
         
         window.addEventListener('resize', () => this.resizeCanvas());
         canvas.addEventListener('mousedown', (e) => this.handleCanvasClick(e));
+        canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+        canvas.addEventListener('mouseleave', () => {
+            this.mouseGridPosition.x = null;
+            this.mouseGridPosition.y = null;
+        });
         
         this.loop();
     }
@@ -168,9 +182,25 @@ class GameEngine {
         const res = this.naturalResources[key];
         if (res) {
             if (Math.random() > 0.9) delete this.naturalResources[key];
-            this.inventory[res] = (this.inventory[res] || 0) + 1;
-            this.ui.updateInventoryUI();
+            this.addItem(res);
         }
+    }
+
+    addItem(item) {
+        this.inventory[item] = (this.inventory[item] || 0) + 1;
+        this.ui.updateInventoryUI();
+    }
+
+    handleCanvasMouseMove(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cameraX = this.player.x - canvas.width / 2;
+        const cameraY = this.player.y - canvas.height / 2;
+        
+        const worldX = e.clientX - rect.left + cameraX;
+        const worldY = e.clientY - rect.top + cameraY;
+
+        this.mouseGridPosition.x = Math.floor(worldX / TILE_SIZE);
+        this.mouseGridPosition.y = Math.floor(worldY / TILE_SIZE);
     }
 
     handleCanvasClick(e) {
@@ -246,7 +276,7 @@ class GameEngine {
             
             if (currentBuilding) {
                 if (typeof currentBuilding.tryReceiveItem === 'function') {
-                    if (currentBuilding.tryReceiveItem(item)) {
+                    if (currentBuilding.tryReceiveItem(item, this, item.gridX, item.gridY)) {
                         this.movingItems.splice(i, 1);
                         continue;
                     }
@@ -288,16 +318,26 @@ class GameEngine {
             }
         }
 
-        // 2. Buildings
         for (const [key, building] of Object.entries(this.buildings)) {
             const [bx, by] = key.split(',').map(Number);
-            // Culling optimization: only draw if within boundary reach
             if (bx >= startX - 1 && bx <= endX + 1 && by >= startY - 1 && by <= endY + 1) {
                 building.draw(bx, by, cameraX, cameraY);
             }
         }
 
-        // 3. Draw Moving Ore Items
+        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' && this.mouseGridPosition.x !== null) {
+            const mx = this.mouseGridPosition.x;
+            const my = this.mouseGridPosition.y;
+            const key = `${mx},${my}`;
+            
+            if (!this.buildings[key]) {
+                const previewBuilding = BuildingFactory[this.currentSelectedBuild](this.getCurrentDirection());
+                if (previewBuilding && typeof previewBuilding.preview === 'function') {
+                    previewBuilding.preview(mx, my, cameraX, cameraY);
+                }
+            }
+        }
+
         this.movingItems.forEach(item => {
             let offset = { x: 0, y: 0 };
             const currentBuilding = this.buildings[`${item.gridX},${item.gridY}`];
@@ -380,6 +420,30 @@ class UIManager {
             itemRow.appendChild(countSpan);
             container.appendChild(itemRow);
         }
+
+        this.updateButtonAffordability();
+    }
+
+    updateButtonAffordability() {
+        document.querySelectorAll('.build-btn').forEach(btn => {
+            const type = btn.getAttribute('data-type');
+            if (type === 'delete') return;
+
+            const recipe = BUILD_RECIPES[type]?.cost;
+            if (!recipe) return;
+
+            const canAfford = Object.keys(recipe).every(res => (this.engine.inventory[res] || 0) >= recipe[res]);
+
+            if (!canAfford) {
+                btn.classList.add('disabled');
+                if (btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    this.engine.currentSelectedBuild = '';
+                }
+            } else {
+                btn.classList.remove('disabled');
+            }
+        });
     }
 
     setupBuildUI() {
@@ -415,6 +479,8 @@ class UIManager {
         document.querySelectorAll('.build-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetBtn = e.currentTarget;
+                if (targetBtn.classList.contains('disabled')) return;
+
                 const isAlreadyActive = targetBtn.classList.contains('active');
 
                 document.querySelectorAll('.build-btn').forEach(b => b.classList.remove('active'));
@@ -436,4 +502,4 @@ class UIManager {
 }
 
 // Fire up engine instance
-const engine = new GameEngine();
+new GameEngine();

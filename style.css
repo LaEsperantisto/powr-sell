@@ -180,3 +180,16 @@ button.active {
     color: #ffffff;
     border-color: #fff !important;
 }
+
+.build-btn.disabled {
+    background-color: #222222 !important;
+    color: #555555 !important;
+    border-color: #333333 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    opacity: 0.6;
+}
+
+.build-btn.disabled .btn-recipe {
+    color: #444444 !important;
+}
