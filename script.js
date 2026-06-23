@@ -45,6 +45,9 @@ const BuildingFactory = {
     smelter: (dir) => new Smelter(dir),
     conveyor2: (dir) => new Conveyor2(dir),
     miner2:    (dir) => new Miner2(dir),
+    smelter2:  { name: 'Smelter 2',  cost: { pure_iron: 5, coal: 20 } },
+    conveyor2: (dir) => new Conveyor2(dir),
+    miner2:    (dir) => new Miner2(dir),
     smelter2:  (dir) => new Smelter2(dir),
 };
 
@@ -58,15 +61,15 @@ class Building {
         return DIR_OFFSETS[this.direction].angle;
     }
 
-    applyRotationTransform(bx, by) {
-        const centerX = bx * TILE_SIZE + TILE_SIZE / 2;
-        const centerY = by * TILE_SIZE + TILE_SIZE / 2;
+    applyRotationTransform(bx, by, cameraX, cameraY) {
+        const centerX = bx * TILE_SIZE + TILE_SIZE / 2 - cameraX;
+        const centerY = by * TILE_SIZE + TILE_SIZE / 2 - cameraY;
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(this.getAngle());
     }
 
-    draw(bx, by) {
+    draw(bx, by, cameraX, cameraY) {
         // Implemented by subclasses
         console.warn("THIS SHOULD BE UNREACHABLE");
     }
@@ -86,8 +89,8 @@ class Conveyor extends Building {
         this.speed = 0.02; // Base speed
     }
 
-    draw(bx, by) {
-        this.applyRotationTransform(bx, by);
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#555';
         ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
         ctx.fillStyle = '#00ffcc';
@@ -116,8 +119,8 @@ class Conveyor2 extends Conveyor {
         this.speed = 0.06;
     }
 
-    draw(bx, by) {
-        this.applyRotationTransform(bx, by);
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#555';
         ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
         ctx.fillStyle = '#26ff00';
@@ -136,8 +139,8 @@ class Miner extends Building {
         this.timer = 0
     }
 
-    draw(bx, by) {
-        this.applyRotationTransform(bx, by);
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#8b0000';
         ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
         ctx.fillStyle = '#ffcc00';
@@ -164,8 +167,8 @@ class Miner extends Building {
 }
 
 class Miner2 extends Miner {
-    draw(bx, by) {
-        this.applyRotationTransform(bx, by);
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#dcbe10';
         ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
         ctx.fillStyle = '#ff00ae';
@@ -200,8 +203,8 @@ class Smelter extends Building {
         this.processingTime = 90;
     }
 
-    draw(bx, by) {
-        this.applyRotationTransform(bx, by);
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#7b7b7b';
         ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
         
@@ -260,8 +263,8 @@ class Smelter2 extends Smelter {
         this.processingTime = 60;
     }
 
-    draw(bx, by) {
-        this.applyRotationTransform(bx, by);
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
         ctx.fillStyle = '#b2fff2';
         ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
         
@@ -280,6 +283,7 @@ class GameEngine {
     constructor() {
         this.player = { x: 100, y: 100, size: 20, speed: 4 };
         this.inventory = {};
+        this.generatedTiles = new Set();
 
         Object.keys(RESOURCE_TYPES).forEach(resource => {
             this.inventory[resource] = DEBUG ? 999 : 0;
@@ -299,7 +303,6 @@ class GameEngine {
     }
 
     init() {
-        this.generateWorld();
         this.ui.setupBuildUI();
         this.ui.setupSaveLoadUI(); // Setup Save/Load Buttons
         this.ui.updateInventoryUI();
@@ -313,9 +316,13 @@ class GameEngine {
 
     // --- SAVE / LOAD SYSTEM ---
     saveGame() {
+        const validation = confirm("Are you sure you want to override the current save file?");
+        if (!validation) return;
         const saveData = {
             inventory: this.inventory,
             naturalResources: this.naturalResources,
+            generatedTiles: Array.from(this.generatedTiles),
+            player: this.player,
             buildings: Object.entries(this.buildings).reduce((acc, [key, building]) => {
                 acc[key] = {
                     type: building.constructor.name.toLowerCase(),
@@ -330,6 +337,9 @@ class GameEngine {
     }
 
     loadGame() {
+        const validation = confirm("Are you sure you want to override the current world?");
+        if (!validation) return;
+        
         const rawData = localStorage.getItem('factory_survival_save');
         if (!rawData) {
             alert('No saved factory layout found.');
@@ -344,6 +354,8 @@ class GameEngine {
             });
 
             this.naturalResources = saveData.naturalResources || {};
+            this.generatedTiles = new Set(saveData.generatedTiles || []);
+            if (saveData.player) this.player = saveData.player;
 
             this.buildings = {};
             this.movingItems = [];
@@ -369,15 +381,15 @@ class GameEngine {
         canvas.height = window.innerHeight;
     }
 
-    generateWorld() {
-        for (let x = 0; x < 50; x++) {
-            for (let y = 0; y < 50; y++) {
-                const rand = Math.random();
-                if (rand < 0.03)      this.naturalResources[`${x},${y}`] = 'iron_ore';
-                else if (rand < 0.05) this.naturalResources[`${x},${y}`] = 'copper_ore';
-                else if (rand < 0.06) this.naturalResources[`${x},${y}`] = 'coal';
-            }
-        }
+    generateTileIfNeeded(x, y) {
+        const key = `${x},${y}`;
+        if (this.generatedTiles.has(key)) return;
+
+        this.generatedTiles.add(key);
+        const rand = Math.random();
+        if (rand < 0.03)      this.naturalResources[key] = 'iron_ore';
+        else if (rand < 0.05) this.naturalResources[key] = 'copper_ore';
+        else if (rand < 0.06) this.naturalResources[key] = 'coal';
     }
 
     getCurrentDirection() {
@@ -404,8 +416,14 @@ class GameEngine {
 
     handleCanvasClick(e) {
         const rect = canvas.getBoundingClientRect();
-        const gridX = Math.floor((e.clientX - rect.left) / TILE_SIZE);
-        const gridY = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+        const cameraX = this.player.x - canvas.width / 2;
+        const cameraY = this.player.y - canvas.height / 2;
+        
+        const worldX = e.clientX - rect.left + cameraX;
+        const worldY = e.clientY - rect.top + cameraY;
+
+        const gridX = Math.floor(worldX / TILE_SIZE);
+        const gridY = Math.floor(worldY / TILE_SIZE);
         const key = `${gridX},${gridY}`;
 
         if (this.currentSelectedBuild === '') return;
@@ -484,19 +502,29 @@ class GameEngine {
     draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const endX = Math.ceil(canvas.width / TILE_SIZE);
-        const endY = Math.ceil(canvas.height / TILE_SIZE);
+        const cameraX = this.player.x - canvas.width / 2;
+        const cameraY = this.player.y - canvas.height / 2;
 
-        // 1. Grid & Background resources
-        for (let x = 0; x < endX; x++) {
-            for (let y = 0; y < endY; y++) {
+        const startX = Math.floor(cameraX / TILE_SIZE);
+        const startY = Math.floor(cameraY / TILE_SIZE);
+        const endX = Math.ceil((cameraX + canvas.width) / TILE_SIZE);
+        const endY = Math.ceil((cameraY + canvas.height) / TILE_SIZE);
+
+        // 1. Grid & Dynamic generation of viewport tiles
+        for (let x = startX; x <= endX; x++) {
+            for (let y = startY; y <= endY; y++) {
+                this.generateTileIfNeeded(x, y);
                 const key = `${x},${y}`;
+                
+                const screenX = x * TILE_SIZE - cameraX;
+                const screenY = y * TILE_SIZE - cameraY;
+
                 if (this.naturalResources[key]) {
                     ctx.fillStyle = RESOURCE_TYPES[this.naturalResources[key]].color;
-                    ctx.fillRect(x * TILE_SIZE + 2, y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.fillRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                 } else {
                     ctx.strokeStyle = '#333';
-                    ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                 }
             }
         }
@@ -504,7 +532,10 @@ class GameEngine {
         // 2. Buildings
         for (const [key, building] of Object.entries(this.buildings)) {
             const [bx, by] = key.split(',').map(Number);
-            building.draw(bx, by);
+            // Culling optimization: only draw if within boundary reach
+            if (bx >= startX - 1 && bx <= endX + 1 && by >= startY - 1 && by <= endY + 1) {
+                building.draw(bx, by, cameraX, cameraY);
+            }
         }
 
         // 3. Draw Moving Ore Items
@@ -516,20 +547,23 @@ class GameEngine {
                 offset = DIR_OFFSETS[currentBuilding.direction];
             }
 
-            const renderX = (item.gridX + (offset.x * item.progress)) * TILE_SIZE + TILE_SIZE / 2;
-            const renderY = (item.gridY + (offset.y * item.progress)) * TILE_SIZE + TILE_SIZE / 2;
+            const worldRenderX = (item.gridX + (offset.x * item.progress)) * TILE_SIZE + TILE_SIZE / 2;
+            const worldRenderY = (item.gridY + (offset.y * item.progress)) * TILE_SIZE + TILE_SIZE / 2;
+
+            const screenRenderX = worldRenderX - cameraX;
+            const screenRenderY = worldRenderY - cameraY;
 
             ctx.fillStyle = RESOURCE_TYPES[item.type]?.color || '#fff';
             ctx.strokeStyle = '#fff';
             ctx.beginPath();
-            ctx.arc(renderX, renderY, 6, 0, Math.PI * 2);
+            ctx.arc(screenRenderX, screenRenderY, 6, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
         });
 
-        // 4. Player
+        // 4. Player (Stays in the center of the camera viewport screen)
         ctx.fillStyle = '#00ff00';
-        ctx.fillRect(this.player.x - this.player.size / 2, this.player.y - this.player.size / 2, this.player.size, this.player.size);
+        ctx.fillRect(canvas.width / 2 - this.player.size / 2, canvas.height / 2 - this.player.size / 2, this.player.size, this.player.size);
     }
 
     loop() {
