@@ -19,6 +19,7 @@ import {
     BouncePad3,
     Sorter,
     SorterHead,
+    ConveyorUltimate,
 } from './buildings.js';
 
 import {
@@ -58,6 +59,7 @@ const BuildingFactory = {
     bouncepad3: (dir) => new BouncePad3(dir),
     sorter: (dir) => new Sorter(dir),
     sorterhead: (dir) => new SorterHead(dir),
+    conveyorultimate: (dir) => new ConveyorUltimate(dir),
 };
 
 let permaDaws = [];
@@ -86,6 +88,8 @@ class GameEngine {
         this.input = new InputHandler(this);
         this.ui = new UIManager(this);
 
+        this.mouseDown = null;
+
         this.init();
     }
 
@@ -96,13 +100,18 @@ class GameEngine {
         this.resizeCanvas();
         
         window.addEventListener('resize', () => this.resizeCanvas());
-        canvas.addEventListener('mousedown', (e) => this.handleCanvasClick(e));
-        canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+        canvas.addEventListener('mousedown', (e) => this.mouseDown = e);
+        canvas.addEventListener('mousemove', (e) => {
+            this.handleCanvasMouseMove(e);
+            if (this.mouseDown !== null) this.mouseDown = e;
+        });
         canvas.addEventListener('mouseleave', () => {
             this.mouseGridPosition.x = null;
             this.mouseGridPosition.y = null;
             this.hoveredBuildingName = null;
+            this.mouseDown = null;
         });
+        canvas.addEventListener('mouseup', (e) => this.mouseDown = null);
         
         this.loop();
     }
@@ -271,6 +280,7 @@ class GameEngine {
     }
 
     update() {
+        if (this.mouseDown !== null) this.handleCanvasClick(this.mouseDown);
         // Player Movement
         if (this.input.isPressed('w') || this.input.isPressed('arrowup'))    this.player.y -= this.player.speed;
         if (this.input.isPressed('s') || this.input.isPressed('arrowdown'))  this.player.y += this.player.speed;

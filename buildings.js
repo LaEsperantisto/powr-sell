@@ -114,6 +114,26 @@ export class Conveyor3 extends Conveyor {
     }
 }
 
+export class ConveyorUltimate extends Conveyor {
+    constructor(direction) {
+        super(direction);
+        this.speed = 1;
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, -10);
+        ctx.lineTo(-5, 10);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
 export class Miner extends Building {
     constructor(direction) {
         super(direction);

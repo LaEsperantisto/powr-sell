@@ -40,6 +40,7 @@ export const BUILD_RECIPES = {
     conveyor: { name: 'Conveyor', cost: { iron_ore: 1 } },
     conveyor2: { name: 'Conveyor 2', cost: { pure_iron: 2 } },
     conveyor3: { name: 'Conveyor 3', cost: { iron_ingot: 5 } },
+    conveyorultimate: { name: 'Conveyor Ultimate', cost: { tar: 100 } },
     miner:    { name: 'Miner',    cost: { iron_ore: 3, copper_ore: 1 } },
     miner2:    { name: 'Miner 2',    cost: { pure_iron: 3, pure_copper: 1 } },
     miner3:    { name: 'Miner 3',    cost: { iron_ingot: 3, copper_ingot: 1 } },
