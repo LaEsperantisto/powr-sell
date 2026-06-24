@@ -546,6 +546,20 @@ export class Receiver extends Building {
     }
 }
 
+export class Destroyer extends Building {
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        
+        ctx.restore();
+    }
+
+    tryReceiveItem(item, engine) {
+        return true;
+    }
+}
+
 export class ThreeWaySplitter extends Building {
     constructor(direction) {
         super(direction);
@@ -752,6 +766,48 @@ export class Refinery extends Building {
             return true; // Item consumed successfully
         }
         return false;
+    }
+}
+
+export class Refinery2 extends Refinery {
+    constructor(direction) {
+        super(direction);
+        this.timer = 0;
+        this.isProcessing = false;
+        this.currentOutput = null;
+        this.processingTime = 150;
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#e5524a';
+        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        
+        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
+        ctx.fillRect(4, -5, 12, 10);
+
+        ctx.restore();
+    }
+}
+
+export class Refinery3 extends Refinery {
+    constructor(direction) {
+        super(direction);
+        this.timer = 0;
+        this.isProcessing = false;
+        this.currentOutput = null;
+        this.processingTime = 100;
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#e5524a';
+        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        
+        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
+        ctx.fillRect(4, -5, 12, 10);
+
+        ctx.restore();
     }
 }
 

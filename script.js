@@ -20,6 +20,9 @@ import {
     Sorter,
     SorterHead,
     ConveyorUltimate,
+    Refinery2,
+    Refinery3,
+    Destroyer,
 } from './buildings.js';
 
 import {
@@ -60,6 +63,9 @@ const BuildingFactory = {
     sorter: (dir) => new Sorter(dir),
     sorterhead: (dir) => new SorterHead(dir),
     conveyorultimate: (dir) => new ConveyorUltimate(dir),
+    refinery2: (dir) => new Refinery2(dir),
+    refinery3: (dir) => new Refinery3(dir),
+    destroyer: (dir) => new Destroyer(dir),
 };
 
 let permaDaws = [];
