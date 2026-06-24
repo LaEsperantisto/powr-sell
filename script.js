@@ -17,6 +17,8 @@ import {
     BouncePad,
     BouncePad2,
     BouncePad3,
+    Sorter,
+    SorterHead,
 } from './buildings.js';
 
 import {
@@ -54,6 +56,8 @@ const BuildingFactory = {
     bouncepad: (dir) => new BouncePad(dir),
     bouncepad2: (dir) => new BouncePad2(dir),
     bouncepad3: (dir) => new BouncePad3(dir),
+    sorter: (dir) => new Sorter(dir),
+    sorterhead: (dir) => new SorterHead(dir),
 };
 
 let permaDaws = [];
@@ -65,6 +69,8 @@ class GameEngine {
         this.inventory = {};
         this.generatedTiles = new Set();
         this.mouseGridPosition = { x: null, y: null };
+        this.mouseCanvasPosition = { x: 0, y: 0 }; // Track screen coordinates for rendering tooltip text
+        this.hoveredBuildingName = null;           // Track the name of the building currently under mouse
 
         Object.keys(RESOURCE_TYPES).forEach(resource => {
             this.inventory[resource] = DEBUG ? 999 : 0;
@@ -95,6 +101,7 @@ class GameEngine {
         canvas.addEventListener('mouseleave', () => {
             this.mouseGridPosition.x = null;
             this.mouseGridPosition.y = null;
+            this.hoveredBuildingName = null;
         });
         
         this.loop();
@@ -209,8 +216,12 @@ class GameEngine {
         const cameraX = this.player.x - canvas.width / 2;
         const cameraY = this.player.y - canvas.height / 2;
         
-        const worldX = e.clientX - rect.left + cameraX;
-        const worldY = e.clientY - rect.top + cameraY;
+        // Save screen coords for tooltip display
+        this.mouseCanvasPosition.x = e.clientX - rect.left;
+        this.mouseCanvasPosition.y = e.clientY - rect.top;
+
+        const worldX = this.mouseCanvasPosition.x + cameraX;
+        const worldY = this.mouseCanvasPosition.y + cameraY;
 
         this.mouseGridPosition.x = Math.floor(worldX / TILE_SIZE);
         this.mouseGridPosition.y = Math.floor(worldY / TILE_SIZE);
@@ -265,6 +276,19 @@ class GameEngine {
         if (this.input.isPressed('s') || this.input.isPressed('arrowdown'))  this.player.y += this.player.speed;
         if (this.input.isPressed('a') || this.input.isPressed('arrowleft'))  this.player.x -= this.player.speed;
         if (this.input.isPressed('d') || this.input.isPressed('arrowright')) this.player.x += this.player.speed;
+
+        // Check for building under mouse cursor
+        if (this.mouseGridPosition.x !== null && this.mouseGridPosition.y !== null) {
+            const key = `${this.mouseGridPosition.x},${this.mouseGridPosition.y}`;
+            const building = this.buildings[key];
+            if (building) {
+                this.hoveredBuildingName = building.constructor.name;
+            } else {
+                this.hoveredBuildingName = null;
+            }
+        } else {
+            this.hoveredBuildingName = null;
+        }
 
         // Process Buildings
         for (const [key, building] of Object.entries(this.buildings)) {
@@ -377,6 +401,29 @@ class GameEngine {
         // 4. Player (Stays in the center of the camera viewport screen)
         ctx.fillStyle = '#00da00';
         ctx.fillRect(canvas.width / 2 - this.player.size / 2, canvas.height / 2 - this.player.size / 2, this.player.size, this.player.size);
+
+        // 5. Draw Tooltip text on top if hovering a building
+        if (this.hoveredBuildingName && this.currentSelectedBuild === '') {
+            ctx.save();
+            ctx.font = '14px sans-serif';
+            
+            const text = this.hoveredBuildingName;
+            const textWidth = ctx.measureText(text).width;
+            const padding = 6;
+            
+            // Offset text position slightly above the actual cursor pointer
+            const tooltipX = this.mouseCanvasPosition.x + 10;
+            const tooltipY = this.mouseCanvasPosition.y - 15;
+
+            // Background box for tooltip
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            ctx.fillRect(tooltipX - padding, tooltipY - 14, textWidth + (padding * 2), 20);
+
+            // Tooltip Text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(text, tooltipX, tooltipY);
+            ctx.restore();
+        }
     }
 
     loop() {

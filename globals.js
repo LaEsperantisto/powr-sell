@@ -58,7 +58,9 @@ export const BUILD_RECIPES = {
     refinery: { name: 'Refinery', cost: { tar: 50, copper_ingot: 20, iron_ingot: 20 } },
     bouncepad: { name: 'Bounce Pad', cost: { rubber: 25, iron_ingot: 50 } },
     bouncepad2: { name: 'Bounce Pad 2', cost: { rubber: 30, plastic: 15, pure_iron: 30, iron_ingot: 50} },
-    bouncepad3: { name: 'Bounce Pad 3', cost: { rubber: 45, plastic: 25, iron_ingot: 70, copper_ingot: 40 }},
+    bouncepad3: { name: 'Bounce Pad 3', cost: { rubber: 45, plastic: 25, iron_ingot: 70, copper_ingot: 40 } },
+    // sorter: { name: 'Sorter', cost: { copper_ingot: 20, plastic: 15 } },
+    // sorterhead: { name: 'Sorter Head', cost: { iron_ingot: 10 } },
 };
 
 export const canvas = document.getElementById('gameCanvas');

@@ -1,4 +1,4 @@
-import { TILE_SIZE, ctx, DIR_OFFSETS, DIRECTIONS, RECIPES, canvas } from "./globals.js";
+import { TILE_SIZE, ctx, DIR_OFFSETS, DIRECTIONS, RECIPES, canvas, RESOURCE_TYPES } from "./globals.js";
 
 
 // --- OBJECT-ORIENTED BUILDING LOGIC ---
@@ -739,6 +739,7 @@ export class BouncePad extends Building {
     constructor(direction) {
         super(direction);
         this.speed = 0.02; // Base speed
+        this.range = 2;
     }
 
     draw(bx, by, cameraX, cameraY) {
@@ -759,12 +760,12 @@ export class BouncePad extends Building {
         if (item.progress >= 1) {
             const offset = DIR_OFFSETS[this.direction];
             if (offset.x !== 0) {
-                item.gridX += offset.x * 5;
+                item.gridX += offset.x * this.range;
                 item.gridY += offset.y;
             }
             else {
                 item.gridX += offset.x;
-                item.gridY += offset.y * 5;
+                item.gridY += offset.y * this.range;
             }
             item.progress = 0;
         }
@@ -775,6 +776,7 @@ export class BouncePad2 extends BouncePad {
     constructor(direction) {
         super(direction);
         this.speed = 0.06; // Base speed
+        this.range = 3;
     }
 
     draw(bx, by, cameraX, cameraY) {
@@ -795,6 +797,7 @@ export class BouncePad3 extends BouncePad {
     constructor(direction) {
         super(direction);
         this.speed = 0.12; // Base speed
+        this.range = 5;
     }
 
     draw(bx, by, cameraX, cameraY) {
@@ -808,5 +811,116 @@ export class BouncePad3 extends BouncePad {
         ctx.lineTo(-5, 10);
         ctx.fill();
         ctx.restore();
+    }
+}
+
+export class Sorter extends Building {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.02; // Base speed
+        this.x = 0;
+        this.y = 0;
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#f562ff';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        
+        ctx.fillStyle = '#00ffcc';
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+
+        ctx.rotate(Math.PI / 2);
+        
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(2, -8);
+        ctx.lineTo(2, 8);
+        ctx.fill();
+
+        ctx.rotate(Math.PI / 2);
+
+        ctx.fillStyle = '#444';
+        ctx.fillRect(4, -5, 12, 10);
+        
+        ctx.restore();
+
+        this.x = bx;
+        this.y = by;
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += this.speed;
+        if (item.progress >= 1) {
+            const head = this.getHead(this.x, this.y, engine);
+
+            let offset;
+            // If there is a filter head and its recorded item matches the current item
+            if (head && head.item === item.type) {
+                // Keep moving straight forward
+                offset = DIR_OFFSETS[this.direction];
+            } else {
+                // Otherwise, turn right
+                const currentIndex = DIRECTIONS.indexOf(this.direction);
+                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
+                offset = DIR_OFFSETS[rightDirection];
+            }
+            
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+    }
+
+    getHead(bx, by, engine) {
+        // Since the grey parts touch, the head is directly in front of the sorter's direction
+        const offset = DIR_OFFSETS[this.direction];
+        const targetBuilding = engine.buildings[`${bx + offset.x},${by + offset.y}`];
+        
+        // Ensure the building found is actually a SorterHead
+        if (targetBuilding && targetBuilding instanceof SorterHead) {
+            return targetBuilding;
+        }
+        return null;
+    }
+}
+
+export class SorterHead extends Building {
+    constructor(dir) {
+        super(dir);
+        this.item = null;
+    }
+    
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#f562ff';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+
+        ctx.rotate(Math.PI / 2);
+        ctx.rotate(Math.PI / 2);
+
+        ctx.fillStyle = '#444';
+        ctx.fillRect(4, -5, 12, 10);
+
+        ctx.restore();
+    }
+
+    handleItemOnTile(item, engine) {
+        this.item = item.type;
+        
+        /*
+        const offset = DIR_OFFSETS[this.direction];
+        item.progress += this.speed || 0.02; 
+        if (item.progress >= 1) {
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+        
+        */
     }
 }
