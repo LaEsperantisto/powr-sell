@@ -12,6 +12,7 @@ import {
     ThreeWaySplitter,
     ThreeWaySplitterPart2,
     ThreeWaySplitterPart3,
+    Beacon,
 } from './buildings.js';
 
 import {
@@ -44,7 +45,10 @@ const BuildingFactory = {
     threewaysplitter: (dir) => new ThreeWaySplitter(dir),
     threewaysplitterpart2: (dir) => new ThreeWaySplitterPart2(dir),
     threewaysplitterpart3: (dir) => new ThreeWaySplitterPart3(dir),
+    beacon: (dir) => new Beacon(dir),
 };
+
+let permaDaws = [];
 
 // --- CORE GAME ENGINE ---
 class GameEngine {
@@ -241,6 +245,7 @@ class GameEngine {
         if (canAfford) {
             Object.keys(recipe).forEach(res => this.inventory[res] -= recipe[res]);
             this.buildings[key] = BuildingFactory[this.currentSelectedBuild](this.getCurrentDirection());
+            if (this.buildings[key].isPermaDraw()) permaDaws.push(key);
             this.ui.updateInventoryUI();
         }
     }
@@ -320,7 +325,7 @@ class GameEngine {
 
         for (const [key, building] of Object.entries(this.buildings)) {
             const [bx, by] = key.split(',').map(Number);
-            if (bx >= startX - 1 && bx <= endX + 1 && by >= startY - 1 && by <= endY + 1) {
+            if (permaDaws.includes(key) || ( bx >= startX - 1 && bx <= endX + 1 && by >= startY - 1 && by <= endY + 1 )) {
                 building.draw(bx, by, cameraX, cameraY);
             }
         }

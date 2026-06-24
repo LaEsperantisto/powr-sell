@@ -45,9 +45,10 @@ export const BUILD_RECIPES = {
     moulder3: { name: 'Moulder 3', cost: { iron_ingot: 50, copper_ingot: 50, coal: 50 } },
     splitter: { name: 'Splitter', cost: { pure_iron: 10, copper_ingot: 20 } },
     splitter2: { name: 'Splitter 2', cost: { iron_ingot: 10, copper_ingot: 30 } },
-    splitter3: { name: 'Splitter 3', cost: { iron_ingot: 15, copper_ingot: 40 } },
+    splitter3: { name: 'Splitter 3', cost: { iron_ingot: 15, copper_ingot: 40, tar: 20 } },
     receiver: { name: 'Receiver', cost: { tar: 20, iron_ingot: 20 } },
-    threewaysplitter: { name: 'Three Way Splitter', cost: { tar: 50, copper_ingot: 20}},
+    threewaysplitter: { name: 'Three Way Splitter', cost: { tar: 50, copper_ingot: 20 } },
+    beacon: { name: 'Beacon', cost: { tar: 100, iron_ingot: 20 }},
 };
 
 export const canvas = document.getElementById('gameCanvas');

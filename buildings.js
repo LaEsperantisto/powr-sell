@@ -1,4 +1,4 @@
-import { TILE_SIZE, ctx, DIR_OFFSETS, DIRECTIONS, RECIPES } from "./globals.js";
+import { TILE_SIZE, ctx, DIR_OFFSETS, DIRECTIONS, RECIPES, canvas } from "./globals.js";
 
 
 // --- OBJECT-ORIENTED BUILDING LOGIC ---
@@ -37,6 +37,10 @@ export class Building {
         ctx.globalAlpha = 0.4;
         this.draw(bx, by, cameraX, cameraY);
         ctx.restore();
+    }
+
+    isPermaDraw() {
+        return false;
     }
 }
 
@@ -475,24 +479,6 @@ export class Splitter2 extends Splitter {
         
         ctx.restore();
     }
-
-    handleItemOnTile(item, engine) {
-        item.progress += this.speed;
-        if (item.progress >= 1) {
-            let offset;
-            if (Math.random() >= 0.5) {
-                offset = DIR_OFFSETS[this.direction];
-            }
-            else {
-                const currentIndex = DIRECTIONS.indexOf(this.direction);
-                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
-                offset = DIR_OFFSETS[rightDirection];
-            }
-            item.gridX += offset.x;
-            item.gridY += offset.y;
-            item.progress = 0;
-        }
-    }
 }
 
 export class Splitter3 extends Splitter {
@@ -523,24 +509,6 @@ export class Splitter3 extends Splitter {
         
         ctx.restore();
     }
-
-    handleItemOnTile(item, engine) {
-        item.progress += this.speed;
-        if (item.progress >= 1) {
-            let offset;
-            if (Math.random() >= 0.5) {
-                offset = DIR_OFFSETS[this.direction];
-            }
-            else {
-                const currentIndex = DIRECTIONS.indexOf(this.direction);
-                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
-                offset = DIR_OFFSETS[rightDirection];
-            }
-            item.gridX += offset.x;
-            item.gridY += offset.y;
-            item.progress = 0;
-        }
-    }
 }
 
 export class Receiver extends Building {
@@ -557,6 +525,7 @@ export class Receiver extends Building {
         return true;
     }
 }
+
 export class ThreeWaySplitter extends Building {
     constructor(direction) {
         super(direction);
@@ -647,13 +616,6 @@ export class ThreeWaySplitterPart2 extends Building {
         return engine.buildings[`${bx + offset.x},${by + offset.y}`];
     }
 
-    update(key, bx, by, engine) {
-        const head = this.getHead(bx, by, engine);
-        if (!head || head.constructor.name !== 'ThreeWaySplitter') {
-            delete engine.buildings[key];
-        }
-    }
-
     tryReceiveItem(item, engine, bx, by) {
         const head = this.getHead(bx, by, engine);
         return head && typeof head.tryReceiveItem === 'function' ? head.tryReceiveItem(item, engine) : false;
@@ -670,17 +632,48 @@ export class ThreeWaySplitterPart3 extends Building {
         return engine.buildings[`${bx + offset.x},${by + offset.y}`];
     }
 
-    update(key, bx, by, engine) {
-        const head = this.getHead(bx, by, engine);
-        if (!head || head.constructor.name !== 'ThreeWaySplitter') {
-            delete engine.buildings[key];
-        }
-    }
-
     tryReceiveItem(item, engine, bx, by) {
         const head = this.getHead(bx, by, engine);
         return head && typeof head.tryReceiveItem === 'function' ? head.tryReceiveItem(item, engine) : false;
     }
 
     draw() {}
+}
+
+export class Beacon extends Building {
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#0066ff';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.restore();
+
+        const screenX = bx * TILE_SIZE + TILE_SIZE / 2 - cameraX;
+        const screenY = by * TILE_SIZE + TILE_SIZE / 2 - cameraY;
+
+        const padding = 15;
+        const minX = padding;
+        const maxX = canvas.width - padding;
+        const minY = padding;
+        const maxY = canvas.height - padding;
+
+        const isOffScreen = screenX < 0 || screenX > canvas.width || screenY < 0 || screenY > canvas.height;
+
+        if (isOffScreen) {
+            const indicatorX = Math.max(minX, Math.min(screenX, maxX));
+            const indicatorY = Math.max(minY, Math.min(screenY, maxY));
+
+            ctx.save();
+            ctx.translate(indicatorX, indicatorY);
+            ctx.rotate(this.getAngle());
+
+            ctx.fillStyle = '#0066ff';
+            ctx.fillRect(-6, -6, 12, 12);
+
+            ctx.restore();
+        }
+    }
+
+    isPermaDraw() {
+        return true;
+    }
 }
