@@ -15,7 +15,9 @@ export const RESOURCE_TYPES = {
     pure_copper: { color: '#ff7f50', name: 'Pure Copper' },
     iron_ingot:   { color: '#74b0ff', name: 'Iron Ingot' },
     copper_ingot: { color: '#ff4400', name: 'Copper Ingot' },
-    tar: { color: '#565656', name: 'Tar'},
+    tar: { color: '#565656', name: 'Tar' },
+    rubber: { color: '#7c5a37', name: 'Rubber' },
+    plastic: { color: '#14a3e5', name: 'Plastic' },
 };
 
 export const RECIPES = {
@@ -26,8 +28,12 @@ export const RECIPES = {
     moulder: {
         pure_iron: { count: 1, output: 'iron_ingot' },
         pure_copper: { count: 1, output: 'copper_ingot' },
-        coal: { count: 5, output: 'tar'},
+        coal: { count: 1, output: 'tar'},
     },
+    refinery: {
+        tar: { count: 1, output: 'rubber' },
+        rubber: { count: 1, output: 'plastic' },
+    }
 };
 
 export const BUILD_RECIPES = {
@@ -48,7 +54,11 @@ export const BUILD_RECIPES = {
     splitter3: { name: 'Splitter 3', cost: { iron_ingot: 15, copper_ingot: 40, tar: 20 } },
     receiver: { name: 'Receiver', cost: { tar: 20, iron_ingot: 20 } },
     threewaysplitter: { name: 'Three Way Splitter', cost: { tar: 50, copper_ingot: 20 } },
-    beacon: { name: 'Beacon', cost: { tar: 100, iron_ingot: 20 }},
+    beacon: { name: 'Beacon', cost: { tar: 100, iron_ingot: 20 } },
+    refinery: { name: 'Refinery', cost: { tar: 50, copper_ingot: 20, iron_ingot: 20 } },
+    bouncepad: { name: 'Bounce Pad', cost: { rubber: 25, iron_ingot: 50 } },
+    bouncepad2: { name: 'Bounce Pad 2', cost: { rubber: 30, plastic: 15, pure_iron: 30, iron_ingot: 50} },
+    bouncepad3: { name: 'Bounce Pad 3', cost: { rubber: 45, plastic: 25, iron_ingot: 70, copper_ingot: 40 }},
 };
 
 export const canvas = document.getElementById('gameCanvas');

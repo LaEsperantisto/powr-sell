@@ -677,3 +677,136 @@ export class Beacon extends Building {
         return true;
     }
 }
+
+export class Refinery extends Building {
+    constructor(direction) {
+        super(direction);
+        this.timer = 0;
+        this.isProcessing = false;
+        this.currentOutput = null;
+        this.processingTime = 200;
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#e5924a';
+        ctx.fillRect(-TILE_SIZE / 2 + 4, -TILE_SIZE / 2 + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+        
+        ctx.fillStyle = this.isProcessing ? '#ff4000' : '#444';
+        ctx.fillRect(4, -5, 12, 10);
+
+        ctx.restore();
+    }
+
+    update(key, bx, by, engine) {
+        if (this.isProcessing) {
+            this.timer++;
+            if (this.timer >= this.processingTime) {
+                const offset = DIR_OFFSETS[this.direction];
+                
+                engine.movingItems.push({
+                    type: this.currentOutput,
+                    gridX: bx + offset.x,
+                    gridY: by + offset.y,
+                    progress: 0.1
+                });
+
+                this.isProcessing = false;
+                this.currentOutput = null;
+                this.timer = 0;
+            }
+        }
+    }
+
+    
+    tryReceiveItem(item, engine) {
+        if (this.isProcessing) return false;
+
+        const refineryRecipes = RECIPES.refinery;
+        const recipe = refineryRecipes[item.type];
+
+        if (recipe) {
+            this.isProcessing = true;
+            this.currentOutput = recipe.output;
+            this.timer = 0;
+            return true; // Item consumed successfully
+        }
+        return false;
+    }
+}
+
+export class BouncePad extends Building {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.02; // Base speed
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#3aa332';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#00ffcc';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, -10);
+        ctx.lineTo(-5, 10);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += this.speed;
+        if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
+            if (offset.x !== 0) {
+                item.gridX += offset.x * 5;
+                item.gridY += offset.y;
+            }
+            else {
+                item.gridX += offset.x;
+                item.gridY += offset.y * 5;
+            }
+            item.progress = 0;
+        }
+    }
+}
+
+export class BouncePad2 extends BouncePad {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.06; // Base speed
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#3aa332';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#26ff00';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, -10);
+        ctx.lineTo(-5, 10);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+export class BouncePad3 extends BouncePad {
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.12; // Base speed
+    }
+
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#3aa332';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, -10);
+        ctx.lineTo(-5, 10);
+        ctx.fill();
+        ctx.restore();
+    }
+}

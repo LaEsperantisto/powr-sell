@@ -13,6 +13,10 @@ import {
     ThreeWaySplitterPart2,
     ThreeWaySplitterPart3,
     Beacon,
+    Refinery,
+    BouncePad,
+    BouncePad2,
+    BouncePad3,
 } from './buildings.js';
 
 import {
@@ -46,6 +50,10 @@ const BuildingFactory = {
     threewaysplitterpart2: (dir) => new ThreeWaySplitterPart2(dir),
     threewaysplitterpart3: (dir) => new ThreeWaySplitterPart3(dir),
     beacon: (dir) => new Beacon(dir),
+    refinery: (dir) => new Refinery(dir),
+    bouncepad: (dir) => new BouncePad(dir),
+    bouncepad2: (dir) => new BouncePad2(dir),
+    bouncepad3: (dir) => new BouncePad3(dir),
 };
 
 let permaDaws = [];
@@ -141,6 +149,7 @@ class GameEngine {
             Object.entries(saveData.buildings).forEach(([key, data]) => {
                 if (BuildingFactory[data.type]) {
                     this.buildings[key] = BuildingFactory[data.type](data.direction);
+                    if (this.buildings[key].isPermaDraw()) permaDaws.push(key);
                 } else {
                     console.warn(`Building type "${data.type}" not recognized in this game version.`);
                 }
@@ -164,7 +173,7 @@ class GameEngine {
 
         this.generatedTiles.add(key);
         const rand = Math.random();
-        if (rand < 0.03)      this.naturalResources[key] = 'iron_ore';
+        if (rand < 0.03) this.naturalResources[key] = 'iron_ore';
         else if (rand < 0.05) this.naturalResources[key] = 'copper_ore';
         else if (rand < 0.06) this.naturalResources[key] = 'coal';
     }
@@ -366,7 +375,7 @@ class GameEngine {
         });
 
         // 4. Player (Stays in the center of the camera viewport screen)
-        ctx.fillStyle = '#00ff00';
+        ctx.fillStyle = '#00da00';
         ctx.fillRect(canvas.width / 2 - this.player.size / 2, canvas.height / 2 - this.player.size / 2, this.player.size, this.player.size);
     }
 
