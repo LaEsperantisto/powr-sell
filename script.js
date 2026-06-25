@@ -212,8 +212,9 @@ class GameEngine {
         return DIRECTIONS[this.currentRotationIndex];
     }
 
-    rotateSelection() {
-        this.currentRotationIndex = (this.currentRotationIndex + 1) % DIRECTIONS.length;
+    rotateSelection(isAnticlockwise = false) {
+        this.currentRotationIndex = (this.currentRotationIndex + (isAnticlockwise ? -1 : 1)) % DIRECTIONS.length;
+        if (this.currentRotationIndex < 0) this.currentRotationIndex = 3;
         this.ui.updateRotationDisplay();
     }
 
@@ -459,6 +460,7 @@ class InputHandler {
             
             if (e.key === 'q') engine.mineCurrentBlock();
             if (key === 'r') engine.rotateSelection();
+            if (key === 'e') engine.rotateSelection(true);
         });
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
         document.getElementById('rotate-btn').addEventListener('click', () => engine.rotateSelection());
