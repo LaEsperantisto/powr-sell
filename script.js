@@ -1,5 +1,3 @@
-const DEBUG = false;
-
 import {
     Conveyor, Conveyor2, Conveyor3,
     Smelter, Smelter2, Smelter3,
@@ -82,7 +80,7 @@ class GameEngine {
         this.hoveredBuildingName = null;           
 
         Object.keys(RESOURCE_TYPES).forEach(resource => {
-            this.inventory[resource] = DEBUG ? 999 : 0;
+            this.inventory[resource] = 0;
         });
 
         this.naturalResources = {};
@@ -96,6 +94,8 @@ class GameEngine {
         this.ui = new UIManager(this);
 
         this.mouseDown = null;
+
+        this.firstSelectionPoint = { x: 0, y: 0 };
 
         this.init();
     }
@@ -166,7 +166,7 @@ class GameEngine {
             const saveData = JSON.parse(rawData);
 
             Object.keys(RESOURCE_TYPES).forEach(res => {
-                this.inventory[res] = saveData.inventory[res] !== undefined ? saveData.inventory[res] : (DEBUG ? 999 : 0);
+                this.inventory[res] = saveData.inventory[res] !== undefined ? saveData.inventory[res] : 0;
             });
 
             this.naturalResources = saveData.naturalResources || {};
@@ -280,6 +280,11 @@ class GameEngine {
             return;
         }
 
+        if (this.currentSelectedBuild === 'edit') {
+            this.cur
+            return;
+        }
+
         if (this.buildings[key]) return;
 
         const recipe = this.getRecipe(this.currentSelectedBuild)?.cost;
@@ -384,7 +389,7 @@ class GameEngine {
             }
         }
 
-        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' && this.mouseGridPosition.x !== null) {
+        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' && this.currentSelectedBuild !== 'edit' && this.mouseGridPosition.x !== null) {
             const mx = this.mouseGridPosition.x;
             const my = this.mouseGridPosition.y;
             const key = `${mx},${my}`;
@@ -505,7 +510,7 @@ class UIManager {
     updateButtonAffordability() {
         document.querySelectorAll('.build-btn').forEach(btn => {
             const type = btn.getAttribute('data-type');
-            if (type === 'delete') return;
+            if (type === 'delete' || type === 'edit') return;
 
             const recipe = this.engine.getRecipe(type)?.cost;
             if (!recipe) return;

@@ -103,7 +103,7 @@ Object.values(BUILD_RECIPES).forEach((section) => {
 export const HANDBOOK_DATA = {
     "Getting Started": {
         "Core Loop": "Mine raw resources using [Q] while standing over a deposit, then use the Build Menu to automate processing pipelines.",
-        "Controls": "WASD / Arrows: Move\nQ: Manual Mining\nR: Rotate Selected Placement\nLeft Click: Interact / Place"
+        "Controls": "WASD / Arrows: Move\nQ: Manual Mining\nE / R: Rotate Selected Placement\nLeft Click: Interact / Place"
     },
     "Logistics": {
         "Conveyors": "Moves items forward in the direction they face. Upgraded tiers increase velocity.",
