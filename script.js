@@ -398,23 +398,22 @@ class GameEngine {
         const computedRequiredCost = {};
         let missingResources = false;
 
-        if (!this.isCutting) {
-            this.clipboard.forEach(entry => {
-                const targetKey = `${mx + entry.dx},${my + entry.dy}`;
-                if (this.buildings[targetKey]) return; // Avoid processing overlaps
+        this.clipboard.forEach(entry => {
+            const targetKey = `${mx + entry.dx},${my + entry.dy}`;
+            if (this.buildings[targetKey]) return; // Avoid processing overlaps
 
-                const recipe = this.getRecipe(entry.type)?.cost;
-                if (recipe) {
-                    Object.entries(recipe).forEach(([res, amt]) => {
-                        computedRequiredCost[res] = (computedRequiredCost[res] || 0) + amt;
-                    });
-                }
-            });
+            const recipe = this.getRecipe(entry.type)?.cost;
+            if (recipe) {
+                Object.entries(recipe).forEach(([res, amt]) => {
+                    computedRequiredCost[res] = (computedRequiredCost[res] || 0) + amt;
+                });
+            }
+        });
 
-            missingResources = Object.entries(computedRequiredCost).some(([res, amt]) => {
-                return (this.inventory[res] || 0) < amt;
-            });
-        }
+        missingResources = Object.entries(computedRequiredCost).some(([res, amt]) => {
+            return (this.inventory[res] || 0) < amt;
+        });
+        
 
         if (missingResources) {
             alert("Insufficient item inventory components to construct blueprint pattern.");
@@ -426,18 +425,16 @@ class GameEngine {
             const targetKey = `${mx + entry.dx},${my + entry.dy}`;
             if (this.buildings[targetKey]) return; 
 
-            if (!this.isCutting) {
-                const recipe = this.getRecipe(entry.type)?.cost;
-                if (recipe) {
-                    Object.keys(recipe).forEach(res => this.inventory[res] -= recipe[res]);
-                }
+            
+            const recipe = this.getRecipe(entry.type)?.cost;
+            if (recipe) {
+                Object.keys(recipe).forEach(res => this.inventory[res] -= recipe[res]);
             }
+            
 
             this.buildings[targetKey] = BuildingFactory[entry.type](entry.direction);
             if (this.buildings[targetKey].isPermaDraw()) permaDaws.push(targetKey);
         });
-
-        this.isCutting = false; // Reset modification flag configuration
         this.ui.updateInventoryUI();
     }
 
