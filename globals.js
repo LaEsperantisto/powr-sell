@@ -8,6 +8,7 @@ export const DIR_OFFSETS = {
 };
 
 export const RESOURCE_TYPES = {
+    money: { color: '#ffcc00', name: 'Money' },
     iron_ore:    { color: '#7a7a7a', name: 'Iron Ore' },
     copper_ore:  { color: '#d16e3b', name: 'Copper Ore' },
     coal:        { color: '#111111', name: 'Coal' },
@@ -47,6 +48,9 @@ export const BUILD_RECIPES = {
         bouncepad3: { name: 'Bounce Pad 3', cost: { rubber: 45, plastic: 25, iron_ingot: 70, copper_ingot: 40 } },
         sorter: { name: 'Sorter', cost: { copper_ingot: 20, plastic: 15 } },
         sorterhead: { name: 'Sorter Head', cost: { iron_ingot: 10 } },
+        splitter: { name: 'Splitter', cost: { pure_iron: 10, copper_ingot: 20 } },
+        splitter2: { name: 'Splitter 2', cost: { iron_ingot: 10, copper_ingot: 30 } },
+        splitter3: { name: 'Splitter 3', cost: { iron_ingot: 15, copper_ingot: 40, tar: 20 } },
         threewaysplitter: { name: 'Three Way Splitter', cost: { tar: 50, copper_ingot: 20 } },
         receiver: { name: 'Receiver', cost: { tar: 20, iron_ingot: 20 } },
         destroyer: { name: 'Destroyer', cost: { tar: 20, iron_ingot: 20 } },
@@ -62,9 +66,6 @@ export const BUILD_RECIPES = {
         moulder: { name: 'Moulder', cost: { pure_iron: 10, pure_copper: 20, coal: 20 } },
         moulder2: { name: 'Moulder 2', cost: { iron_ingot: 10, copper_ingot: 20, coal: 30 } },
         moulder3: { name: 'Moulder 3', cost: { iron_ingot: 50, copper_ingot: 50, coal: 50 } },
-        splitter: { name: 'Splitter', cost: { pure_iron: 10, copper_ingot: 20 } },
-        splitter2: { name: 'Splitter 2', cost: { iron_ingot: 10, copper_ingot: 30 } },
-        splitter3: { name: 'Splitter 3', cost: { iron_ingot: 15, copper_ingot: 40, tar: 20 } },
         refinery: { name: 'Refinery', cost: { tar: 50, copper_ingot: 20, iron_ingot: 20 } },
         refinery2: { name: 'Refinery 2', cost: { rubber: 50, copper_ingot: 40, iron_ingot: 20 } },
         refinery3: { name: 'Refinery 3', cost: { plastic: 55, copper_ingot: 45, iron_ingot: 30 } },

@@ -90,13 +90,17 @@ class GameEngine {
         this.currentSelectedBuild = '';
         this.currentRotationIndex = 0;
 
+        // Edit Mode sub-states: 'select', 'paste'
+        this.editState = 'select'; 
+        this.selectionStart = null; // {x, y} grid coordinates
+        this.selectionEnd = null;   // {x, y} grid coordinates
+        this.clipboard = [];        // Array of {dx, dy, type, direction}
+        this.isCutting = false;
+
         this.input = new InputHandler(this);
         this.ui = new UIManager(this);
 
         this.mouseDown = null;
-
-        this.firstSelectionPoint = { x: 0, y: 0 };
-
         this.init();
     }
 
@@ -108,7 +112,10 @@ class GameEngine {
         this.resizeCanvas();
         
         window.addEventListener('resize', () => this.resizeCanvas());
-        canvas.addEventListener('mousedown', (e) => this.mouseDown = e);
+        canvas.addEventListener('mousedown', (e) => {
+            this.mouseDown = e;
+            this.handleCanvasMouseDown(e);
+        });
         canvas.addEventListener('mousemove', (e) => {
             this.handleCanvasMouseMove(e);
             if (this.mouseDown !== null) this.mouseDown = e;
@@ -119,7 +126,10 @@ class GameEngine {
             this.hoveredBuildingName = null;
             this.mouseDown = null;
         });
-        canvas.addEventListener('mouseup', (e) => this.mouseDown = null);
+        canvas.addEventListener('mouseup', (e) => {
+            this.handleCanvasMouseUp(e);
+            this.mouseDown = null;
+        });
         
         this.loop();
     }
@@ -216,6 +226,26 @@ class GameEngine {
         this.currentRotationIndex = (this.currentRotationIndex + (isAnticlockwise ? -1 : 1)) % DIRECTIONS.length;
         if (this.currentRotationIndex < 0) this.currentRotationIndex = 3;
         this.ui.updateRotationDisplay();
+
+        // Rotate clipboard entries if pasting
+        if (this.currentSelectedBuild === 'edit' && this.editState === 'paste' && this.clipboard.length > 0) {
+            this.clipboard = this.clipboard.map(item => {
+                let dIdx = DIRECTIONS.indexOf(item.direction);
+                dIdx = (dIdx + (isAnticlockwise ? -1 : 1)) % DIRECTIONS.length;
+                if (dIdx < 0) dIdx = 3;
+                
+                // Transformed relative coordinates counter-clockwise vs clockwise
+                const rx = isAnticlockwise ? item.dy : -item.dy;
+                const ry = isAnticlockwise ? -item.dx : item.dx;
+
+                return {
+                    dx: rx,
+                    dy: ry,
+                    type: item.type,
+                    direction: DIRECTIONS[dIdx]
+                };
+            });
+        }
     }
 
     mineCurrentBlock() {
@@ -248,21 +278,41 @@ class GameEngine {
 
         this.mouseGridPosition.x = Math.floor(worldX / TILE_SIZE);
         this.mouseGridPosition.y = Math.floor(worldY / TILE_SIZE);
+
+        if (this.currentSelectedBuild === 'edit' && this.editState === 'select' && this.mouseDown) {
+            this.selectionEnd = { ...this.mouseGridPosition };
+        }
+    }
+
+    handleCanvasMouseDown(e) {
+        if (this.currentSelectedBuild !== 'edit') return;
+
+        if (this.editState === 'select') {
+            this.selectionStart = { ...this.mouseGridPosition };
+            this.selectionEnd = { ...this.mouseGridPosition };
+        } else if (this.editState === 'paste') {
+            this.executePaste();
+        }
+    }
+
+    handleCanvasMouseUp(e) {
+        if (this.currentSelectedBuild === 'edit' && this.editState === 'select' && this.selectionStart) {
+            // Selection box is now locked, show contextual edit options panel
+            this.ui.showEditPanel(true);
+        }
     }
 
     handleCanvasClick(e) {
+        if (this.currentSelectedBuild === '' || this.currentSelectedBuild === 'edit') return;
+
         const rect = canvas.getBoundingClientRect();
         const cameraX = this.player.x - canvas.width / 2;
         const cameraY = this.player.y - canvas.height / 2;
-        
         const worldX = e.clientX - rect.left + cameraX;
         const worldY = e.clientY - rect.top + cameraY;
-
         const gridX = Math.floor(worldX / TILE_SIZE);
         const gridY = Math.floor(worldY / TILE_SIZE);
         const key = `${gridX},${gridY}`;
-
-        if (this.currentSelectedBuild === '') return;
 
         if (this.currentSelectedBuild === 'delete') {
             const building = this.buildings[key];
@@ -280,11 +330,6 @@ class GameEngine {
             return;
         }
 
-        if (this.currentSelectedBuild === 'edit') {
-            this.cur
-            return;
-        }
-
         if (this.buildings[key]) return;
 
         const recipe = this.getRecipe(this.currentSelectedBuild)?.cost;
@@ -298,6 +343,102 @@ class GameEngine {
             if (this.buildings[key].isPermaDraw()) permaDaws.push(key);
             this.ui.updateInventoryUI();
         }
+    }
+
+    // --- BLUEPRINT ACTION METHODS ---
+    copySelected(isCut = false) {
+        if (!this.selectionStart || !this.selectionEnd) return;
+        this.clipboard = [];
+        this.isCutting = isCut;
+
+        const xMin = Math.min(this.selectionStart.x, this.selectionEnd.x);
+        const xMax = Math.max(this.selectionStart.x, this.selectionEnd.x);
+        const yMin = Math.min(this.selectionStart.y, this.selectionEnd.y);
+        const yMax = Math.max(this.selectionStart.y, this.selectionEnd.y);
+
+        for (let x = xMin; x <= xMax; x++) {
+            for (let y = yMin; y <= yMax; y++) {
+                const key = `${x},${y}`;
+                if (this.buildings[key]) {
+                    const b = this.buildings[key];
+                    this.clipboard.push({
+                        dx: x - xMin,
+                        dy: y - yMin,
+                        type: b.constructor.name.toLowerCase(),
+                        direction: b.direction
+                    });
+
+                    if (isCut) {
+                        // Return cost materials instantly to inventory on cut command
+                        const recipe = this.getRecipe(b.constructor.name.toLowerCase())?.cost;
+                        if (recipe) {
+                            Object.keys(recipe).forEach(res => this.inventory[res] += recipe[res]);
+                        }
+                        delete this.buildings[key];
+                    }
+                }
+            }
+        }
+        
+        this.ui.updateInventoryUI();
+        // Clear selection visual indicators and prepare paste state placement
+        this.selectionStart = null;
+        this.selectionEnd = null;
+        this.ui.showEditPanel(false);
+        this.editState = 'paste';
+    }
+
+    executePaste() {
+        if (this.clipboard.length === 0) return;
+
+        const mx = this.mouseGridPosition.x;
+        const my = this.mouseGridPosition.y;
+
+        // Validation Pass: Confirm placements don't overlap and determine layout costs
+        const computedRequiredCost = {};
+        let missingResources = false;
+
+        if (!this.isCutting) {
+            this.clipboard.forEach(entry => {
+                const targetKey = `${mx + entry.dx},${my + entry.dy}`;
+                if (this.buildings[targetKey]) return; // Avoid processing overlaps
+
+                const recipe = this.getRecipe(entry.type)?.cost;
+                if (recipe) {
+                    Object.entries(recipe).forEach(([res, amt]) => {
+                        computedRequiredCost[res] = (computedRequiredCost[res] || 0) + amt;
+                    });
+                }
+            });
+
+            missingResources = Object.entries(computedRequiredCost).some(([res, amt]) => {
+                return (this.inventory[res] || 0) < amt;
+            });
+        }
+
+        if (missingResources) {
+            alert("Insufficient item inventory components to construct blueprint pattern.");
+            return;
+        }
+
+        // Processing Pass: Apply placements
+        this.clipboard.forEach(entry => {
+            const targetKey = `${mx + entry.dx},${my + entry.dy}`;
+            if (this.buildings[targetKey]) return; 
+
+            if (!this.isCutting) {
+                const recipe = this.getRecipe(entry.type)?.cost;
+                if (recipe) {
+                    Object.keys(recipe).forEach(res => this.inventory[res] -= recipe[res]);
+                }
+            }
+
+            this.buildings[targetKey] = BuildingFactory[entry.type](entry.direction);
+            if (this.buildings[targetKey].isPermaDraw()) permaDaws.push(targetKey);
+        });
+
+        this.isCutting = false; // Reset modification flag configuration
+        this.ui.updateInventoryUI();
     }
 
     update() {
@@ -389,15 +530,45 @@ class GameEngine {
             }
         }
 
-        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' && this.currentSelectedBuild !== 'edit' && this.mouseGridPosition.x !== null) {
-            const mx = this.mouseGridPosition.x;
-            const my = this.mouseGridPosition.y;
-            const key = `${mx},${my}`;
-            
-            if (!this.buildings[key]) {
-                const previewBuilding = BuildingFactory[this.currentSelectedBuild](this.getCurrentDirection());
-                if (previewBuilding && typeof previewBuilding.preview === 'function') {
-                    previewBuilding.preview(mx, my, cameraX, cameraY);
+        // Dynamic Building Preview / Edit Clipboard Projection Matrix Rendering
+        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' && this.mouseGridPosition.x !== null) {
+            if (this.currentSelectedBuild === 'edit') {
+                if (this.editState === 'select' && this.selectionStart && this.selectionEnd) {
+                    // Draw Drag Selection Box (Factorio Blueprint Tint)
+                    const sx = this.selectionStart.x * TILE_SIZE - cameraX;
+                    const sy = this.selectionStart.y * TILE_SIZE - cameraY;
+                    const width = (this.selectionEnd.x - this.selectionStart.x + 1) * TILE_SIZE;
+                    const height = (this.selectionEnd.y - this.selectionStart.y + 1) * TILE_SIZE;
+
+                    ctx.fillStyle = 'rgba(0, 110, 255, 0.2)';
+                    ctx.fillRect(sx, sy, width, height);
+                    ctx.strokeStyle = '#0088ff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(sx, sy, width, height);
+                    ctx.lineWidth = 1;
+                } else if (this.editState === 'paste' && this.clipboard.length > 0) {
+                    // Draw Phantom Blueprint Projection Preview Boundaries
+                    this.clipboard.forEach(entry => {
+                        const targetX = this.mouseGridPosition.x + entry.dx;
+                        const targetY = this.mouseGridPosition.y + entry.dy;
+                        const previewBuilding = BuildingFactory[entry.type](entry.direction);
+                        if (previewBuilding && typeof previewBuilding.preview === 'function') {
+                            ctx.globalAlpha = 0.4;
+                            previewBuilding.preview(targetX, targetY, cameraX, cameraY);
+                            ctx.globalAlpha = 1.0;
+                        }
+                    });
+                }
+            } else {
+                const mx = this.mouseGridPosition.x;
+                const my = this.mouseGridPosition.y;
+                const key = `${mx},${my}`;
+                
+                if (!this.buildings[key]) {
+                    const previewBuilding = BuildingFactory[this.currentSelectedBuild](this.getCurrentDirection());
+                    if (previewBuilding && typeof previewBuilding.preview === 'function') {
+                        previewBuilding.preview(mx, my, cameraX, cameraY);
+                    }
                 }
             }
         }
@@ -466,6 +637,18 @@ class InputHandler {
             if (e.key === 'q') engine.mineCurrentBlock();
             if (key === 'r') engine.rotateSelection();
             if (key === 'e') engine.rotateSelection(true);
+            
+            // Factorio standard short-cuts integrations for edit configurations
+            if (engine.currentSelectedBuild === 'edit') {
+                if (e.ctrlKey && key === 'c') { e.preventDefault(); engine.copySelected(false); }
+                if (e.ctrlKey && key === 'x') { e.preventDefault(); engine.copySelected(true); }
+                if (key === 'escape') { 
+                    engine.editState = 'select'; 
+                    engine.selectionStart = null; 
+                    engine.selectionEnd = null;
+                    engine.ui.showEditPanel(false);
+                }
+            }
         });
         window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
         document.getElementById('rotate-btn').addEventListener('click', () => engine.rotateSelection());
@@ -479,6 +662,7 @@ class InputHandler {
 class UIManager {
     constructor(engine) {
         this.engine = engine;
+        this.editPanel = null;
     }
 
     updateRotationDisplay() {
@@ -529,11 +713,39 @@ class UIManager {
         });
     }
 
+    showEditPanel(show) {
+        if (!this.editPanel) {
+            this.editPanel = document.createElement('div');
+            this.editPanel.style.position = 'fixed';
+            this.editPanel.style.bottom = '80px';
+            this.editPanel.style.right = '320px';
+            this.editPanel.style.background = '#1f1f1f';
+            this.editPanel.style.padding = '10px';
+            this.editPanel.style.border = '2px solid #0088ff';
+            this.editPanel.style.borderRadius = '6px';
+            this.editPanel.style.display = 'none';
+            this.editPanel.style.gap = '8px';
+            this.editPanel.style.zIndex = '150';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.innerText = '📋 Copy (Ctrl+C)';
+            copyBtn.onclick = () => this.engine.copySelected(false);
+
+            const cutBtn = document.createElement('button');
+            cutBtn.innerText = '✂️ Cut / Move (Ctrl+X)';
+            cutBtn.onclick = () => this.engine.copySelected(true);
+
+            this.editPanel.appendChild(copyBtn);
+            this.editPanel.appendChild(cutBtn);
+            document.body.appendChild(this.editPanel);
+        }
+        this.editPanel.style.display = show ? 'flex' : 'none';
+    }
+
     setupBuildUI() {
         const buildOptions = document.getElementById('build-options');
         
         Object.entries(BUILD_RECIPES).forEach(([sectionKey, sectionContent]) => {
-            // Create Section Toggle Header Button
             const sectionHeader = document.createElement('button');
             sectionHeader.classList.add('section-header-btn');
             sectionHeader.style.width = "100%";
@@ -545,12 +757,10 @@ class UIManager {
             sectionHeader.innerText = sectionKey.toUpperCase();
             buildOptions.appendChild(sectionHeader);
 
-            // Create Container holding this section's buildings
             const sectionContainer = document.createElement('div');
             sectionContainer.classList.add('section-container');
-            sectionContainer.style.display = 'none'; // Collapsed by default
+            sectionContainer.style.display = 'none';
             
-            // Toggle visibility listener
             sectionHeader.addEventListener('click', () => {
                 const isHidden = sectionContainer.style.display === 'none';
                 sectionContainer.style.display = isHidden ? 'block' : 'none';
@@ -582,20 +792,25 @@ class UIManager {
             buildOptions.appendChild(sectionContainer);
         });
 
-        // Event listener for item clicks across all categories
         buildOptions.addEventListener('click', (e) => {
             const targetBtn = e.target.closest('.build-btn');
             if (!targetBtn || targetBtn.classList.contains('disabled')) return;
 
             const isAlreadyActive = targetBtn.classList.contains('active');
-
             document.querySelectorAll('.build-btn').forEach(b => b.classList.remove('active'));
 
             if (!isAlreadyActive) {
                 targetBtn.classList.add('active');
                 this.engine.currentSelectedBuild = targetBtn.getAttribute('data-type');
+                
+                // Reset internal variables if switching configuration contexts
+                this.engine.editState = 'select';
+                this.engine.selectionStart = null;
+                this.engine.selectionEnd = null;
+                this.showEditPanel(false);
             } else {
                 this.engine.currentSelectedBuild = '';
+                this.showEditPanel(false);
             }
         });
     }
@@ -645,5 +860,4 @@ class UIManager {
     }
 }
 
-// Fire up engine instance
 new GameEngine();
