@@ -21,6 +21,7 @@ import {
     Refinery2,
     Refinery3,
     Destroyer,
+    Seller,
 } from './buildings.js';
 
 import {
@@ -65,6 +66,7 @@ const BuildingFactory = {
     refinery2: (dir) => new Refinery2(dir),
     refinery3: (dir) => new Refinery3(dir),
     destroyer: (dir) => new Destroyer(dir),
+    seller: (dir) => new Seller(dir),
 };
 
 let permaDaws = [];
@@ -89,6 +91,9 @@ class GameEngine {
         
         this.currentSelectedBuild = '';
         this.currentRotationIndex = 0;
+
+        this.gameMinutes = 0;
+        this.lastTimeUpdate = 0;
 
         // Edit Mode sub-states: 'select', 'paste'
         this.editState = 'select'; 
@@ -130,8 +135,6 @@ class GameEngine {
             this.handleCanvasMouseUp(e);
             this.mouseDown = null;
         });
-        
-        this.loop();
     }
 
     getRecipe(type) {
@@ -438,7 +441,31 @@ class GameEngine {
         this.ui.updateInventoryUI();
     }
 
+    payRent() {
+        const rent = 10;
+        this.inventory.money -= rent;
+        if (this.inventory.money < 0) {
+            this.loseGame();
+        }
+    }
+
+    loseGame() {
+
+    }
+
     update() {
+        const now = performance.now();
+        if (now - this.lastTimeUpdate >= 1000) {
+            this.gameMinutes++;
+            this.lastTimeUpdate = now;
+            this.ui.updateClockUI(this.gameMinutes);
+
+            if (this.gameMinutes > 1440) {
+                this.payRent();
+                this.gameMinutes = 0;
+            }
+        }
+        
         if (this.mouseDown !== null) this.handleCanvasClick(this.mouseDown);
         if (this.input.isPressed('w') || this.input.isPressed('arrowup'))    this.player.y -= this.player.speed;
         if (this.input.isPressed('s') || this.input.isPressed('arrowdown'))  this.player.y += this.player.speed;
@@ -528,7 +555,7 @@ class GameEngine {
         }
 
         // Dynamic Building Preview / Edit Clipboard Projection Matrix Rendering
-        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' /* && this.mouseGridPosition.x !== null */) {
+        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete') {
             if (this.currentSelectedBuild === 'edit') {
                 if (this.editState === 'select' && this.selectionStart && this.selectionEnd) {
                     // Draw Drag Selection Box (Factorio Blueprint Tint)
@@ -660,6 +687,14 @@ class UIManager {
     constructor(engine) {
         this.engine = engine;
         this.editPanel = null;
+    }
+
+    updateClockUI(totalMinutes) {
+        const hours = Math.floor(totalMinutes / 60) % 24;
+        const minutes = totalMinutes % 60;
+
+        document.getElementById('time-hours').innerText = String(hours).padStart(2, '0');
+        document.getElementById('time-minutes').innerText = String(minutes).padStart(2, '0');
     }
 
     updateRotationDisplay() {
@@ -867,4 +902,6 @@ class UIManager {
     }
 }
 
-new GameEngine();
+const engine = new GameEngine();
+
+engine.loop();

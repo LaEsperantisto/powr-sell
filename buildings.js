@@ -989,3 +989,19 @@ export class SorterHead extends Building {
         }
     }
 }
+
+export class Seller extends Building {
+    draw(bx, by, cameraX, cameraY) {
+        this.applyRotationTransform(bx, by, cameraX, cameraY);
+        ctx.fillStyle = '#ffaa00';
+        ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        
+        ctx.restore();
+    }
+
+    tryReceiveItem(item, engine) {
+        const cost = RESOURCE_TYPES[item.type].cost;
+        engine.inventory.money += cost;
+        return true;
+    }
+}

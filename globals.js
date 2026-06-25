@@ -9,16 +9,16 @@ export const DIR_OFFSETS = {
 
 export const RESOURCE_TYPES = {
     money: { color: '#ffcc00', name: 'Money' },
-    iron_ore:    { color: '#7a7a7a', name: 'Iron Ore' },
-    copper_ore:  { color: '#d16e3b', name: 'Copper Ore' },
-    coal:        { color: '#111111', name: 'Coal' },
-    pure_iron:   { color: '#b0c4de', name: 'Pure Iron' },
-    pure_copper: { color: '#ff7f50', name: 'Pure Copper' },
-    iron_ingot:   { color: '#74b0ff', name: 'Iron Ingot' },
-    copper_ingot: { color: '#ff4400', name: 'Copper Ingot' },
-    tar: { color: '#565656', name: 'Tar' },
-    rubber: { color: '#7c5a37', name: 'Rubber' },
-    plastic: { color: '#14a3e5', name: 'Plastic' },
+    iron_ore:    { color: '#7a7a7a', name: 'Iron Ore', cost: 1 },
+    copper_ore:  { color: '#d16e3b', name: 'Copper Ore', cost: 1 },
+    coal:        { color: '#111111', name: 'Coal', cost: 2 },
+    pure_iron:   { color: '#b0c4de', name: 'Pure Iron', cost: 3 },
+    pure_copper: { color: '#ff7f50', name: 'Pure Copper', cost: 3 },
+    iron_ingot:   { color: '#74b0ff', name: 'Iron Ingot', cost: 5 },
+    copper_ingot: { color: '#ff4400', name: 'Copper Ingot', cost: 5 },
+    tar: { color: '#565656', name: 'Tar', cost: 5 },
+    rubber: { color: '#7c5a37', name: 'Rubber', cost: 10 },
+    plastic: { color: '#14a3e5', name: 'Plastic', cost: 20 },
 };
 
 export const RECIPES = {
@@ -70,6 +70,9 @@ export const BUILD_RECIPES = {
         refinery2: { name: 'Refinery 2', cost: { rubber: 50, copper_ingot: 40, iron_ingot: 20 } },
         refinery3: { name: 'Refinery 3', cost: { plastic: 55, copper_ingot: 45, iron_ingot: 30 } },
     },
+    economics: {
+        seller: { name: 'Seller', cost: { pure_iron: 5, pure_copper: 7, coal: 10 } },
+    }
 };
 
 // --- DYNAMIC DATA PROCESSORS ---
