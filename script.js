@@ -528,7 +528,7 @@ class GameEngine {
         }
 
         // Dynamic Building Preview / Edit Clipboard Projection Matrix Rendering
-        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' && this.mouseGridPosition.x !== null) {
+        if (this.currentSelectedBuild !== '' && this.currentSelectedBuild !== 'delete' /* && this.mouseGridPosition.x !== null */) {
             if (this.currentSelectedBuild === 'edit') {
                 if (this.editState === 'select' && this.selectionStart && this.selectionEnd) {
                     // Draw Drag Selection Box (Factorio Blueprint Tint)
@@ -732,8 +732,18 @@ class UIManager {
             cutBtn.innerText = '✂️ Cut / Move (Ctrl+X)';
             cutBtn.onclick = () => this.engine.copySelected(true);
 
+            const unselectBtn = document.createElement('button');
+            unselectBtn.innerText = 'Unselect (Escape)';
+            unselectBtn.onclick = () => {
+                this.engine.editState = 'select'; 
+                this.engine.selectionStart = null; 
+                this.engine.selectionEnd = null;
+                this.engine.ui.showEditPanel(false);
+            };
+
             this.editPanel.appendChild(copyBtn);
             this.editPanel.appendChild(cutBtn);
+            this.editPanel.appendChild(unselectBtn);
             document.body.appendChild(this.editPanel);
         }
         this.editPanel.style.display = show ? 'flex' : 'none';
