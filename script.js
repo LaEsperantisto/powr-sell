@@ -33,6 +33,7 @@ import {
     canvas,
     DIRECTIONS,
     DIR_OFFSETS,
+    HANDBOOK_DATA,
 } from './globals.js';
 
 const BuildingFactory = {
@@ -77,8 +78,8 @@ class GameEngine {
         this.inventory = {};
         this.generatedTiles = new Set();
         this.mouseGridPosition = { x: null, y: null };
-        this.mouseCanvasPosition = { x: 0, y: 0 }; // Track screen coordinates for rendering tooltip text
-        this.hoveredBuildingName = null;           // Track the name of the building currently under mouse
+        this.mouseCanvasPosition = { x: 0, y: 0 }; 
+        this.hoveredBuildingName = null;           
 
         Object.keys(RESOURCE_TYPES).forEach(resource => {
             this.inventory[resource] = DEBUG ? 999 : 0;
@@ -103,6 +104,7 @@ class GameEngine {
         this.ui.setupBuildUI();
         this.ui.setupSaveLoadUI();
         this.ui.updateInventoryUI();
+        this.ui.setupHandbookUI();
         this.resizeCanvas();
         
         window.addEventListener('resize', () => this.resizeCanvas());
@@ -122,7 +124,13 @@ class GameEngine {
         this.loop();
     }
 
-    // --- SAVE / LOAD SYSTEM ---
+    getRecipe(type) {
+        for (const section of Object.values(BUILD_RECIPES)) {
+            if (section[type]) return section[type];
+        }
+        return null;
+    }
+
     saveGame() {
         const validation = confirm("Are you sure you want to override the current save file?");
         if (!validation) return;
@@ -231,7 +239,6 @@ class GameEngine {
         const cameraX = this.player.x - canvas.width / 2;
         const cameraY = this.player.y - canvas.height / 2;
         
-        // Save screen coords for tooltip display
         this.mouseCanvasPosition.x = e.clientX - rect.left;
         this.mouseCanvasPosition.y = e.clientY - rect.top;
 
@@ -260,7 +267,7 @@ class GameEngine {
             const building = this.buildings[key];
             if (building) {
                 const type = building.constructor.name.toLowerCase();
-                const recipe = BUILD_RECIPES[type]?.cost;
+                const recipe = this.getRecipe(type)?.cost;
                 if (recipe) {
                     Object.keys(recipe).forEach(res => {
                         this.inventory[res] = (this.inventory[res] || 0) + recipe[res];
@@ -274,7 +281,9 @@ class GameEngine {
 
         if (this.buildings[key]) return;
 
-        const recipe = BUILD_RECIPES[this.currentSelectedBuild]?.cost;
+        const recipe = this.getRecipe(this.currentSelectedBuild)?.cost;
+        if (!recipe) return;
+        
         const canAfford = Object.keys(recipe).every(res => (this.inventory[res] || 0) >= recipe[res]);
 
         if (canAfford) {
@@ -287,13 +296,11 @@ class GameEngine {
 
     update() {
         if (this.mouseDown !== null) this.handleCanvasClick(this.mouseDown);
-        // Player Movement
         if (this.input.isPressed('w') || this.input.isPressed('arrowup'))    this.player.y -= this.player.speed;
         if (this.input.isPressed('s') || this.input.isPressed('arrowdown'))  this.player.y += this.player.speed;
         if (this.input.isPressed('a') || this.input.isPressed('arrowleft'))  this.player.x -= this.player.speed;
         if (this.input.isPressed('d') || this.input.isPressed('arrowright')) this.player.x += this.player.speed;
 
-        // Check for building under mouse cursor
         if (this.mouseGridPosition.x !== null && this.mouseGridPosition.y !== null) {
             const key = `${this.mouseGridPosition.x},${this.mouseGridPosition.y}`;
             const building = this.buildings[key];
@@ -306,13 +313,11 @@ class GameEngine {
             this.hoveredBuildingName = null;
         }
 
-        // Process Buildings
         for (const [key, building] of Object.entries(this.buildings)) {
             const [bx, by] = key.split(',').map(Number);
             building.update(key, bx, by, this);
         }
 
-        // Process Transport Items
         const pGridX = Math.floor(this.player.x / TILE_SIZE);
         const pGridY = Math.floor(this.player.y / TILE_SIZE);
 
@@ -335,7 +340,7 @@ class GameEngine {
                         continue;
                     }
                 }
-                currentBuilding.handleItemOnTile(item, this);
+                currentBuilding.handleItemOnTile(item, this, item.gridX, item.gridY);
             } else {
                 item.progress = 0;
             }
@@ -353,7 +358,6 @@ class GameEngine {
         const endX = Math.ceil((cameraX + canvas.width) / TILE_SIZE);
         const endY = Math.ceil((cameraY + canvas.height) / TILE_SIZE);
 
-        // 1. Grid & Dynamic generation of viewport tiles
         for (let x = startX; x <= endX; x++) {
             for (let y = startY; y <= endY; y++) {
                 this.generateTileIfNeeded(x, y);
@@ -414,11 +418,9 @@ class GameEngine {
             ctx.stroke();
         });
 
-        // 4. Player (Stays in the center of the camera viewport screen)
         ctx.fillStyle = '#00da00';
         ctx.fillRect(canvas.width / 2 - this.player.size / 2, canvas.height / 2 - this.player.size / 2, this.player.size, this.player.size);
 
-        // 5. Draw Tooltip text on top if hovering a building
         if (this.hoveredBuildingName && this.currentSelectedBuild === '') {
             ctx.save();
             ctx.font = '14px sans-serif';
@@ -427,15 +429,12 @@ class GameEngine {
             const textWidth = ctx.measureText(text).width;
             const padding = 6;
             
-            // Offset text position slightly above the actual cursor pointer
             const tooltipX = this.mouseCanvasPosition.x + 10;
             const tooltipY = this.mouseCanvasPosition.y - 15;
 
-            // Background box for tooltip
             ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
             ctx.fillRect(tooltipX - padding, tooltipY - 14, textWidth + (padding * 2), 20);
 
-            // Tooltip Text
             ctx.fillStyle = '#ffffff';
             ctx.fillText(text, tooltipX, tooltipY);
             ctx.restore();
@@ -506,7 +505,7 @@ class UIManager {
             const type = btn.getAttribute('data-type');
             if (type === 'delete') return;
 
-            const recipe = BUILD_RECIPES[type]?.cost;
+            const recipe = this.engine.getRecipe(type)?.cost;
             if (!recipe) return;
 
             const canAfford = Object.keys(recipe).every(res => (this.engine.inventory[res] || 0) >= recipe[res]);
@@ -526,55 +525,116 @@ class UIManager {
     setupBuildUI() {
         const buildOptions = document.getElementById('build-options');
         
-        Object.entries(BUILD_RECIPES).forEach(([key, value]) => {
-            const newBuilding = document.createElement('button');
-            newBuilding.classList.add('build-btn');
-            newBuilding.setAttribute('data-type', key);
-            
-            // Create a span for the Building Title
-            const nameSpan = document.createElement('span');
-            nameSpan.classList.add('btn-name');
-            nameSpan.innerText = value.name;
-            newBuilding.appendChild(nameSpan);
+        Object.entries(BUILD_RECIPES).forEach(([sectionKey, sectionContent]) => {
+            // Create Section Toggle Header Button
+            const sectionHeader = document.createElement('button');
+            sectionHeader.classList.add('section-header-btn');
+            sectionHeader.style.width = "100%";
+            sectionHeader.style.textAlign = "left";
+            sectionHeader.style.margin = "10px 0 5px 0";
+            sectionHeader.style.padding = "8px";
+            sectionHeader.style.fontWeight = "bold";
+            sectionHeader.style.cursor = "pointer";
+            sectionHeader.innerText = sectionKey.toUpperCase();
+            buildOptions.appendChild(sectionHeader);
 
-            // Construct and clean up the recipe string format dynamically
-            const costEntries = Object.entries(value.cost).map(([resKey, amt]) => {
-                const prettyResName = RESOURCE_TYPES[resKey] ? RESOURCE_TYPES[resKey].name : resKey;
-                return `${amt} ${prettyResName}`;
+            // Create Container holding this section's buildings
+            const sectionContainer = document.createElement('div');
+            sectionContainer.classList.add('section-container');
+            sectionContainer.style.display = 'none'; // Collapsed by default
+            
+            // Toggle visibility listener
+            sectionHeader.addEventListener('click', () => {
+                const isHidden = sectionContainer.style.display === 'none';
+                sectionContainer.style.display = isHidden ? 'block' : 'none';
             });
-            
-            // Create a span for the Recipe text underneath
-            const recipeSpan = document.createElement('span');
-            recipeSpan.classList.add('btn-recipe');
-            recipeSpan.innerText = `Cost:\n${costEntries.join(', ')}`;
-            newBuilding.appendChild(recipeSpan);
 
-            buildOptions.appendChild(newBuilding);
+            Object.entries(sectionContent).forEach(([key, value]) => {
+                const newBuilding = document.createElement('button');
+                newBuilding.classList.add('build-btn');
+                newBuilding.setAttribute('data-type', key);
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.classList.add('btn-name');
+                nameSpan.innerText = value.name;
+                newBuilding.appendChild(nameSpan);
+
+                const costEntries = Object.entries(value.cost).map(([resKey, amt]) => {
+                    const prettyResName = RESOURCE_TYPES[resKey] ? RESOURCE_TYPES[resKey].name : resKey;
+                    return `${amt} ${prettyResName}`;
+                });
+                
+                const recipeSpan = document.createElement('span');
+                recipeSpan.classList.add('btn-recipe');
+                recipeSpan.innerText = `Cost:\n${costEntries.join(', ')}`;
+                newBuilding.appendChild(recipeSpan);
+
+                sectionContainer.appendChild(newBuilding);
+            });
+
+            buildOptions.appendChild(sectionContainer);
         });
 
-        // Set up click handlers for all buttons
-        document.querySelectorAll('.build-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const targetBtn = e.currentTarget;
-                if (targetBtn.classList.contains('disabled')) return;
+        // Event listener for item clicks across all categories
+        buildOptions.addEventListener('click', (e) => {
+            const targetBtn = e.target.closest('.build-btn');
+            if (!targetBtn || targetBtn.classList.contains('disabled')) return;
 
-                const isAlreadyActive = targetBtn.classList.contains('active');
+            const isAlreadyActive = targetBtn.classList.contains('active');
 
-                document.querySelectorAll('.build-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.build-btn').forEach(b => b.classList.remove('active'));
 
-                if (!isAlreadyActive) {
-                    targetBtn.classList.add('active');
-                    this.engine.currentSelectedBuild = targetBtn.getAttribute('data-type');
-                } else {
-                    this.engine.currentSelectedBuild = '';
-                }
-            });
+            if (!isAlreadyActive) {
+                targetBtn.classList.add('active');
+                this.engine.currentSelectedBuild = targetBtn.getAttribute('data-type');
+            } else {
+                this.engine.currentSelectedBuild = '';
+            }
         });
     }
 
     setupSaveLoadUI() {
         document.getElementById('save-btn').addEventListener('click', () => this.engine.saveGame());
         document.getElementById('load-btn').addEventListener('click', () => this.engine.loadGame());
+    }
+
+    setupHandbookUI() {
+        const toggleBtn = document.getElementById('book-toggle-btn');
+        const overlay = document.getElementById('book-modal-overlay');
+        const closeX = document.getElementById('book-close-x');
+        const headersContainer = document.getElementById('book-headers');
+        const contentContainer = document.getElementById('book-content');
+
+        const openBook = () => overlay.style.display = 'flex';
+        const closeBook = () => overlay.style.display = 'none';
+
+        toggleBtn.addEventListener('click', openBook);
+        closeX.addEventListener('click', closeBook);
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeBook();
+        });
+
+        Object.entries(HANDBOOK_DATA).forEach(([category, topics], index) => {
+            const catBtn = document.createElement('button');
+            catBtn.innerText = category;
+            catBtn.style.padding = "6px 12px";
+            catBtn.style.fontSize = "12px";
+            
+            catBtn.addEventListener('click', () => {
+                contentContainer.innerHTML = '';
+                
+                Object.entries(topics).forEach(([title, description]) => {
+                    const block = document.createElement('div');
+                    block.style.marginBottom = "12px";
+                    block.innerHTML = `<strong style="color: #00ffcc; font-size: 15px;">${title}</strong><br>${description}`;
+                    contentContainer.appendChild(block);
+                });
+            });
+
+            headersContainer.appendChild(catBtn);
+            if (index === 0) catBtn.click();
+        });
     }
 }
 

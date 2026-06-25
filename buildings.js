@@ -893,13 +893,12 @@ export class BouncePad3 extends BouncePad {
 export class Sorter extends Building {
     constructor(direction) {
         super(direction);
-        this.speed = 0.02; // Base speed
-        this.x = 0;
-        this.y = 0;
+        this.speed = 0.02; 
     }
 
     draw(bx, by, cameraX, cameraY) {
         this.applyRotationTransform(bx, by, cameraX, cameraY);
+        
         ctx.fillStyle = '#f562ff';
         ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
         
@@ -910,42 +909,35 @@ export class Sorter extends Building {
         ctx.lineTo(2, 8);
         ctx.fill();
 
+        ctx.save();
         ctx.rotate(Math.PI / 2);
-        
         ctx.beginPath();
         ctx.moveTo(14, 0);
         ctx.lineTo(2, -8);
         ctx.lineTo(2, 8);
         ctx.fill();
-
-        ctx.rotate(Math.PI / 2);
-
-        ctx.fillStyle = '#444';
-        ctx.fillRect(4, -5, 12, 10);
-        
         ctx.restore();
 
-        this.x = bx;
-        this.y = by;
+        ctx.fillStyle = '#444';
+        ctx.fillRect(TILE_SIZE / 2 - 12, -5, 12, 10);
+        
+        ctx.restore();
     }
 
-    handleItemOnTile(item, engine) {
+    handleItemOnTile(item, engine, bx, by) {
         item.progress += this.speed;
         if (item.progress >= 1) {
-            const head = this.getHead(this.x, this.y, engine);
+            const head = this.getHead(bx, by, engine);
+            let targetDirection;
 
-            let offset;
-            // If there is a filter head and its recorded item matches the current item
             if (head && head.item === item.type) {
-                // Keep moving straight forward
-                offset = DIR_OFFSETS[this.direction];
+                targetDirection = this.direction;
             } else {
-                // Otherwise, turn right
                 const currentIndex = DIRECTIONS.indexOf(this.direction);
-                const rightDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
-                offset = DIR_OFFSETS[rightDirection];
+                targetDirection = DIRECTIONS[(currentIndex + 1) % DIRECTIONS.length];
             }
             
+            const offset = DIR_OFFSETS[targetDirection];
             item.gridX += offset.x;
             item.gridY += offset.y;
             item.progress = 0;
@@ -953,12 +945,10 @@ export class Sorter extends Building {
     }
 
     getHead(bx, by, engine) {
-        // Since the grey parts touch, the head is directly in front of the sorter's direction
         const offset = DIR_OFFSETS[this.direction];
         const targetBuilding = engine.buildings[`${bx + offset.x},${by + offset.y}`];
         
-        // Ensure the building found is actually a SorterHead
-        if (targetBuilding && targetBuilding instanceof SorterHead) {
+        if (targetBuilding && targetBuilding.constructor.name === 'SorterHead') {
             return targetBuilding;
         }
         return null;
@@ -966,21 +956,23 @@ export class Sorter extends Building {
 }
 
 export class SorterHead extends Building {
-    constructor(dir) {
-        super(dir);
+    constructor(direction) {
+        super(direction);
+        this.speed = 0.02;
         this.item = null;
     }
     
     draw(bx, by, cameraX, cameraY) {
         this.applyRotationTransform(bx, by, cameraX, cameraY);
+        
         ctx.fillStyle = '#f562ff';
         ctx.fillRect(-TILE_SIZE / 2 + 2, -TILE_SIZE / 2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
 
-        ctx.rotate(Math.PI / 2);
-        ctx.rotate(Math.PI / 2);
+        ctx.fillStyle = '#00ffcc';
+        ctx.fillRect(-TILE_SIZE / 2 + 6, -2, TILE_SIZE - 12, 4);
 
         ctx.fillStyle = '#444';
-        ctx.fillRect(4, -5, 12, 10);
+        ctx.fillRect(-TILE_SIZE / 2, -5, 12, 10);
 
         ctx.restore();
     }
@@ -988,15 +980,12 @@ export class SorterHead extends Building {
     handleItemOnTile(item, engine) {
         this.item = item.type;
         
-        /*
-        const offset = DIR_OFFSETS[this.direction];
-        item.progress += this.speed || 0.02; 
+        item.progress += this.speed; 
         if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
             item.gridX += offset.x;
             item.gridY += offset.y;
             item.progress = 0;
         }
-        
-        */
     }
 }
