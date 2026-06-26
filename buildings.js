@@ -165,6 +165,16 @@ export class Miner extends Building {
             }
         }
     }
+
+    handleItemOnTile(item, engine) {
+        item.progress += 0.05;
+        if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+    }
 }
 
 export class Miner2 extends Miner {
@@ -278,6 +288,16 @@ export class Smelter extends Building {
         }
         return false;
     }
+
+    handleItemOnTile(item, engine) {
+        item.progress += 0.12;
+        if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
+    }
 }
 
 export class Smelter2 extends Smelter {
@@ -376,6 +396,16 @@ export class Moulder extends Building {
             return true; // Item consumed successfully
         }
         return false;
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += 0.12;
+        if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
     }
 }
 
@@ -766,6 +796,16 @@ export class Refinery extends Building {
             return true; // Item consumed successfully
         }
         return false;
+    }
+
+    handleItemOnTile(item, engine) {
+        item.progress += 0.12;
+        if (item.progress >= 1) {
+            const offset = DIR_OFFSETS[this.direction];
+            item.gridX += offset.x;
+            item.gridY += offset.y;
+            item.progress = 0;
+        }
     }
 }
 
